@@ -14,8 +14,8 @@ class PIDDe:
         selfDe.Kd = KdDe
         selfDe.thetac = thetac
 
-        self.previous_error_De = 0
-        self.integral_De = 0
+        selfDe.previous_error_De = 0
+        selfDe.integral_De = 0
 
     def update_De(selfDe, theta, dtDe):
         """
@@ -33,14 +33,14 @@ class PIDDe:
         proportional_De = selfDe.Kp * error_De
 
         # 积分项
-        self.integral_De += error_De * dtDe
-        integral_De = selfDe.Ki  * self.integral_De
+        selfDe.integral_De += error_De * dtDe
+        integral_De = selfDe.Ki  * selfDe.integral_De
 
         # 微分项
-        derivative_De = selfDe.Kd * (error_De - self.previous_error_De) / dtDe
+        derivative_De = selfDe.Kd * (error_De - selfDe.previous_error_De) / dtDe
 
         # 更新前一次误差
-        self.previous_error_De = error_De
+        selfDe.previous_error_De = error_De
 
         # 计算控制输出
         output_De = proportional_De + integral_De + derivative_De
@@ -64,8 +64,8 @@ class PIDDa:
         selfDa.Kd = KdDa
         selfDa.phic = phic
 
-        self.previous_error_Da = 0
-        self.integral_Da = 0
+        selfDa.previous_error_Da = 0
+        selfDa.integral_Da = 0
 
     def update_Da(selfDa, phi, dtDa):
         """
@@ -83,14 +83,14 @@ class PIDDa:
         proportional_Da = selfDa.Kp * error_Da
 
         # 积分项
-        self.integral_Da += error_Da * dtDa
-        integral_Da = selfDa.Ki  * self.integral_Da
+        selfDa.integral_Da += error_Da * dtDa
+        integral_Da = selfDa.Ki  * selfDa.integral_Da
 
         # 微分项
-        derivative_Da = selfDa.Kd * (error_Da - self.previous_error_Da) / dtDa
+        derivative_Da = selfDa.Kd * (error_Da - selfDa.previous_error_Da) / dtDa
 
         # 更新前一次误差
-        self.previous_error_Da = error_Da
+        selfDa.previous_error_Da = error_Da
 
         # 计算控制输出
         output_Da = proportional_Da + integral_Da + derivative_Da
