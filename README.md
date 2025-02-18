@@ -1,7 +1,13 @@
 # 公开空战平台LAG上的实验
 用于代码同步开发
 
+## documents
+> 文件说明
+
+ppt 组会汇报使用材料
+
 ##  note
+> 代码阅读使用记录
 ### missile
 missile: LAGmaster/envs/JSBSim/core/simulatior.py
 
