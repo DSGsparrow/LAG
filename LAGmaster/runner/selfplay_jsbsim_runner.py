@@ -10,7 +10,7 @@ def _t2n(x):
     return x.detach().cpu().numpy()
 
 
-class elfplayJSBSimRunner(JSBSimRunner):
+class SelfplayJSBSimRunner(JSBSimRunner):
 
     def load(self):
         self.use_selfplay = self.all_args.use_selfplay 
