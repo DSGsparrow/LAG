@@ -297,6 +297,7 @@ def _get_render_config(parser: argparse.ArgumentParser):
     group = parser.add_argument_group("Render parameters")
     group.add_argument("--render-opponent-index", type=str, default='latest', help="the index of opponent policy in the opponent pool. by default latest")
     group.add_argument("--render-index", type=str, default='latest', help="the index of ego policy. by default latest")
+    group.add_argument("--render-interval", type=int, default=5, help="the interval to render, to see train result")
     return parser
 
 

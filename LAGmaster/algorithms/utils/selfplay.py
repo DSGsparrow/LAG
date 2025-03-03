@@ -40,6 +40,7 @@ class FSP(SelfplayAlgorithm):
 
     @staticmethod
     def choose(agents_elo: Dict[str, float], **kwargs) -> str:
+        a = list(agents_elo.keys())
         return np.random.choice(list(agents_elo.keys()))
 
     @staticmethod

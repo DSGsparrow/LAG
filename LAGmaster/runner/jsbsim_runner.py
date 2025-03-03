@@ -17,6 +17,7 @@ class JSBSimRunner(Runner):
         self.act_space = self.envs.action_space
         self.num_agents = self.envs.num_agents
         self.use_selfplay = self.all_args.use_selfplay
+        self.render_interval = 10
 
         # policy & algorithm
         if self.algorithm_name == "ppo":
@@ -96,6 +97,10 @@ class JSBSimRunner(Runner):
             # save model
             if (episode % self.save_interval == 0) or (episode == episodes - 1):
                 self.save(episode)
+
+            # render
+            if episode % self.render_interval == 0 and episode != 0:
+                self.render()
 
     def warmup(self):
         # reset env

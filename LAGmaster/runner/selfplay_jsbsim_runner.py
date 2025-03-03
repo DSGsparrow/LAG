@@ -229,7 +229,7 @@ class SelfplayJSBSimRunner(JSBSimRunner):
 
         actual_score = np.zeros_like(expected_score)
         diff = opponent_average_episode_rewards - eval_average_episode_rewards
-        actual_score[diff > 100] = 1 # win
+        actual_score[diff > 100] = 1 # win  # 敌方赢
         actual_score[abs(diff) < 100] = 0.5 # tie
         actual_score[diff < -100] = 0 # lose
 

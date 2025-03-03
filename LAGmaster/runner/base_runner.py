@@ -19,6 +19,7 @@ class Runner(object):
         self.eval_envs = config['eval_envs']
         self.device = config['device']
         self.render_mode = config['render_mode']
+        self.render_interval = 10
         
         # Tacview render obj
         self.tacview = None

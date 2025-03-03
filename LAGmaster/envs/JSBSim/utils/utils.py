@@ -62,6 +62,8 @@ def get_AO_TA_R(ego_feature, enm_feature, return_side=False):
 
     Returns:
         (tuple): ego_AO, ego_TA, R
+        视线角，敌方方位角（余角），距离
+        弧度值
     """
     ego_x, ego_y, ego_z, ego_vx, ego_vy, ego_vz = ego_feature
     ego_v = np.linalg.norm([ego_vx, ego_vy, ego_vz])
