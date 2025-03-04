@@ -98,9 +98,9 @@ class JSBSimRunner(Runner):
             if (episode % self.save_interval == 0) or (episode == episodes - 1):
                 self.save(episode)
 
-            # render
-            if episode % self.render_interval == 0 and episode != 0:
-                self.render()
+            # # render
+            # if episode % self.render_interval == 0:  # and episode != 0:
+            #     self.render()
 
     def warmup(self):
         # reset env
