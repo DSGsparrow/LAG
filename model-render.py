@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import logging
 import sys
+import os
 
 from envs.JSBSim.envs import SingleCombatEnv, SingleControlEnv, MultipleCombatEnv
 from envs.env_wrappers import SubprocVecEnv, DummyVecEnv, ShareSubprocVecEnv, ShareDummyVecEnv
@@ -48,6 +49,33 @@ def parse_args(args, parser):
     all_args = parser.parse_known_args(args)[0]
     return all_args
 
+
+def get_unique_filename(experiment_name, ego_ver, enm_ver, folder="render-result"):
+    """
+    生成唯一的实验结果文件名，防止覆盖已有文件。
+
+    参数:
+    - experiment_name (str): 实验名称
+    - folder (str): 存放实验结果的文件夹，默认是 "experiments"
+
+    返回:
+    - str: 唯一的实验文件路径
+    """
+    if not os.path.exists(folder):
+        os.makedirs(folder)  # 如果文件夹不存在，则创建它
+
+    txt_name = f'{experiment_name}-{ego_ver}-{enm_ver}'
+
+    base_filename = os.path.join(folder, txt_name)
+    filename = f"{base_filename}.txt.acmi"
+    counter = 1
+
+    while os.path.exists(filename):  # 如果文件已存在，递增编号
+        filename = f"{base_filename}_{counter}.txt.acmi"
+        counter += 1
+
+    return filename
+
 def render(args, ego_path, enm_path, ego_ver, enm_ver):
     # args: 训练输入的超参
     parser = get_config()
@@ -58,6 +86,8 @@ def render(args, ego_path, enm_path, ego_ver, enm_ver):
     act_space = env.action_space
     num_agents = env.num_agents
     experiment_name = all_args.experiment_name
+
+    save_acmi_path = get_unique_filename(experiment_name, ego_ver, enm_ver)
 
     # cuda
     if all_args.cuda and torch.cuda.is_available():
@@ -88,7 +118,7 @@ def render(args, ego_path, enm_path, ego_ver, enm_ver):
     render_episode_rewards = 0
 
     render_obs = env.reset()
-    env.render(mode='txt', filepath=f'render-result/{experiment_name}-{ego_ver}-{enm_ver}.txt.acmi')
+    env.render(mode='txt', filepath=save_acmi_path)
     render_masks = np.ones((1, *buffer.masks.shape[2:]), dtype=np.float32)
     render_rnn_states = np.zeros((1, *buffer.rnn_states_actor.shape[2:]), dtype=np.float32)
     render_opponent_obs = render_obs[:, num_agents // 2:, ...]
@@ -116,7 +146,7 @@ def render(args, ego_path, enm_path, ego_ver, enm_ver):
         render_obs, render_rewards, render_dones, render_infos = env.step(render_actions)
         render_rewards = render_rewards[:, :num_agents // 2, ...]
         render_episode_rewards += render_rewards
-        env.render(mode='txt', filepath=f'render-result/{experiment_name}-{ego_ver}-{enm_ver}.txt.acmi')
+        env.render(mode='txt', filepath=save_acmi_path)
         if render_dones.all():
             break
         render_opponent_obs = render_obs[:, num_agents // 2:, ...]
@@ -127,7 +157,19 @@ def render(args, ego_path, enm_path, ego_ver, enm_ver):
 if __name__ == "__main__":
     args = sys.argv[1:]
     ego_ver = 'latest'
-    enm_ver = '400'
+    enm_ver = '700'
     ego_path = 'LAGmaster/scripts/results/SingleCombat/1v1/ShootMissile/HierarchySelfplay/ppo/v1/run16/actor_' + ego_ver + '.pt'
     enm_path = 'LAGmaster/scripts/results/SingleCombat/1v1/ShootMissile/HierarchySelfplay/ppo/v1/run16/actor_' + enm_ver + '.pt'
+    # enm_path = 'LAGmaster/envs/JSBSim/model/dodge_missile_model.pt'
     render(args, ego_path, enm_path, ego_ver, enm_ver)
+
+    # for i in range(1040):
+    #     # 记录 奖励，输赢
+    #     enm_ver = str(i)
+    #     ego_ver = 'latest'
+    #     # enm_ver = '700'
+    #     ego_path = 'LAGmaster/scripts/results/SingleCombat/1v1/ShootMissile/HierarchySelfplay/ppo/v1/run16/actor_' + ego_ver + '.pt'
+    #     enm_path = 'LAGmaster/scripts/results/SingleCombat/1v1/ShootMissile/HierarchySelfplay/ppo/v1/run16/actor_' + enm_ver + '.pt'
+    #     # enm_path = 'LAGmaster/envs/JSBSim/model/dodge_missile_model.pt'
+    #     render(args, ego_path, enm_path, ego_ver, enm_ver)
+
