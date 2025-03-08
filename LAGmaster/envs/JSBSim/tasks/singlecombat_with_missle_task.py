@@ -4,6 +4,7 @@ from collections import deque
 
 from .singlecombat_task import SingleCombatTask, HierarchicalSingleCombatTask
 from ..reward_functions import AltitudeReward, PostureReward, MissilePostureReward, EventDrivenReward, ShootPenaltyReward
+from ..reward_functions import EndAltitudeReward
 from ..core.simulatior import MissileSimulator
 from ..utils.utils import LLA2NEU, get_AO_TA_R
 
@@ -118,6 +119,8 @@ class SingleCombatDodgeMissileTask(SingleCombatTask):
 
             shoot_flag = agent.is_alive and np.sum(self.lock_duration[agent_id]) >= self.lock_duration[agent_id].maxlen \
                 and distance <= self.max_attack_distance and self.remaining_missiles[agent_id] > 0 and shoot_interval >= self.min_attack_interval
+
+            shoot_flag = agent.is_alive and self.remaining_missiles[agent_id] > 0
             if shoot_flag:
                 new_missile_uid = agent_id + str(self.remaining_missiles[agent_id])
                 env.add_temp_simulator(
@@ -135,7 +138,8 @@ class HierarchicalSingleCombatDodgeMissileTask(HierarchicalSingleCombatTask, Sin
             PostureReward(self.config),
             MissilePostureReward(self.config),
             AltitudeReward(self.config),
-            EventDrivenReward(self.config)
+            EventDrivenReward(self.config),
+            EndAltitudeReward(self.config),
         ]
 
     def load_observation_space(self):

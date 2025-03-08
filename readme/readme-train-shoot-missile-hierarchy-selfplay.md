@@ -2,7 +2,7 @@
 奖励：
 - PostureReward 视线角越小，奖励越大，敌方视线角小于pi/2，给负奖励，距离超过7000就急剧下降
 - 甚至用了势能（potential）函数：尽可能接近视线角对准等这样的目标，避免奖励累积
-- ![距离奖励图](ppt/Posture reward.png)
+- ![距离奖励图](../ppt/Posture%20reward.png)
 - AltitudeReward 低于安全高度给负奖励，还向下飞就给速度的负奖励
 - EventDrivenReward 终端奖励：被击中或坠毁给-200，导弹获胜（击中）给200
 - ShootPenaltyReward 发射一颗导弹就给-10

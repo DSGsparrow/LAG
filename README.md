@@ -79,6 +79,11 @@ readme/readme-train-shoot-missile-hierarchy-selfplay.md
 
 ### 训练dodge missile
 readme/readme-train-dodge-missile.md  
+## **注：修改了singlecombat_env.py中reset_simulator函数**
+
+
+### 初始化、reset 飞机状态：
+env_base.py中load_simulator函数调用yaml中init_state
 
 
 > 张洪图 02-14-2025
