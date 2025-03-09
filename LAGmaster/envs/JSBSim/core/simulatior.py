@@ -532,3 +532,19 @@ class MissileSimulator(BaseSimulator):
         # update mass
         if self._t < self._t_thrust:
             self._m = self._m - self.dt * self._dm
+
+    @property
+    def is_near_exhaustion(self):
+        """综合判断导弹是否快要耗尽能量"""
+        # dry_mass = self._m0 - self._dm * self._t_thrust  # 计算干质量
+
+        # v = np.linalg.norm(self.get_velocity())
+
+        return (
+                # self._t >= (self._t_thrust * 0.9)  # 飞行时间接近推力结束
+                # or self.Isp < (self._Isp * 0.1)  # 剩余推力过小
+                # or self._m <= dry_mass * 1.1  # 质量接近干质量
+                (self._t > self._t_thrust and np.linalg.norm(self.get_velocity()) < self._v_min * 1.2)  # 速度下降
+                or self.K < (self._K * 0.2)  # 机动能力下降 48s之后
+        )
+

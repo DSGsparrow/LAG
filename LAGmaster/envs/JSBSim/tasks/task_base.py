@@ -108,6 +108,7 @@ class BaseTask(ABC):
             done = done or d
             success = success and s
             if done:
+                info['success'] = success
                 break
         return done, info
 

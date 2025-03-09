@@ -77,7 +77,7 @@ def get_unique_filename(experiment_name, ego_ver, enm_ver, folder="render-result
 
     return filename
 
-def render(args, ego_path, enm_path, ego_ver, enm_ver):
+def render_selfplay(args, ego_path, enm_path, ego_ver, enm_ver):
     # args: 训练输入的超参
     parser = get_config()
     all_args = parse_args(args, parser)
@@ -156,36 +156,40 @@ def render(args, ego_path, enm_path, ego_ver, enm_ver):
     return render_episode_rewards.item(), render_rewards.item()
 
 
+def render():
+
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
-    # ego_ver = 'latest'
-    # enm_ver = '700'
-    # ego_path = 'LAGmaster/scripts/results/SingleCombat/1v1/ShootMissile/HierarchySelfplay/ppo/v1/run16/actor_' + ego_ver + '.pt'
-    # enm_path = 'LAGmaster/scripts/results/SingleCombat/1v1/ShootMissile/HierarchySelfplay/ppo/v1/run16/actor_' + enm_ver + '.pt'
-    # # enm_path = 'LAGmaster/envs/JSBSim/model/dodge_missile_model.pt'
-    # episode_rewards, reward = render(args, ego_path, enm_path, ego_ver, enm_ver)
-    # a=0
+    ego_ver = 'latest'
+    enm_ver = '700'
+    ego_path = 'LAGmaster/scripts/results/SingleCombat/1v1/DodgeMissile/HierarchyVsBaseline/ppo/1v1/run38/actor_latest.pt'
+    enm_path = 'LAGmaster/scripts/results/SingleCombat/1v1/ShootMissile/HierarchySelfplay/ppo/v1/run16/actor_' + enm_ver + '.pt'
+    # enm_path = 'LAGmaster/envs/JSBSim/model/dodge_missile_model.pt'
+    episode_rewards, reward = render_selfplay(args, ego_path, enm_path, ego_ver, enm_ver)
+    a=0
 
-    data = []
-    for i in range(0, 1040, 10):
-        print('enm_ver', i)
-        # 记录 奖励，输赢
-        enm_ver = str(i)
-        ego_ver = 'latest'
-        # enm_ver = '700'
-        ego_path = 'LAGmaster/scripts/results/SingleCombat/1v1/ShootMissile/HierarchySelfplay/ppo/v1/run16/actor_' + ego_ver + '.pt'
-        enm_path = 'LAGmaster/scripts/results/SingleCombat/1v1/ShootMissile/HierarchySelfplay/ppo/v1/run16/actor_' + enm_ver + '.pt'
-        # enm_path = 'LAGmaster/envs/JSBSim/model/dodge_missile_model.pt'
-        episode_rewards, reward = render(args, ego_path, enm_path, ego_ver, enm_ver)
-        data.append({"enm_ver": i, "最终奖励": reward, '输赢': reward<-190, '局总奖励': episode_rewards})
-
-    # 转换为 DataFrame
-    df = pd.DataFrame(data)
-
-    # 保存到 Excel
-    excel_filename = "render-result/agent_rewards.xlsx"
-    df.to_excel(excel_filename, index=False)
-
-    print(f"奖励数据已保存至 {excel_filename}")
+    # data = []
+    # for i in range(0, 1040, 10):
+    #     print('enm_ver', i)
+    #     # 记录 奖励，输赢
+    #     enm_ver = str(i)
+    #     ego_ver = 'latest'
+    #     # enm_ver = '700'
+    #     ego_path = 'LAGmaster/scripts/results/SingleCombat/1v1/ShootMissile/HierarchySelfplay/ppo/v1/run16/actor_' + ego_ver + '.pt'
+    #     enm_path = 'LAGmaster/scripts/results/SingleCombat/1v1/ShootMissile/HierarchySelfplay/ppo/v1/run16/actor_' + enm_ver + '.pt'
+    #     # enm_path = 'LAGmaster/envs/JSBSim/model/dodge_missile_model.pt'
+    #     episode_rewards, reward = render(args, ego_path, enm_path, ego_ver, enm_ver)
+    #     data.append({"enm_ver": i, "最终奖励": reward, '输赢': reward<-190, '局总奖励': episode_rewards})
+    #
+    # # 转换为 DataFrame
+    # df = pd.DataFrame(data)
+    #
+    # # 保存到 Excel
+    # excel_filename = "render-result/agent_rewards.xlsx"
+    # df.to_excel(excel_filename, index=False)
+    #
+    # print(f"奖励数据已保存至 {excel_filename}")
 
 

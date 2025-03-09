@@ -81,6 +81,38 @@ def parse_args(args, parser):
     return all_args
 
 
+def setup_logging(run_dir):
+    """配置 logging，让日志既输出到终端，又写入 run.log 文件"""
+    os.makedirs(run_dir, exist_ok=True)  # 确保日志目录存在
+    log_file = os.path.join(run_dir, "run.log")  # 日志文件路径
+
+    # 获取全局 logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)  # 设定最低日志级别
+
+    # 清除已有的 handlers，防止重复添加
+    logger.handlers.clear()
+
+    # 终端 Handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+
+    # 文件 Handler
+    file_handler = logging.FileHandler(log_file, mode="a")  # "a" 追加模式
+    file_handler.setLevel(logging.INFO)
+
+    # 日志格式
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+
+    # 添加 handlers
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+
+    logging.info("init complete, log path: " + log_file)
+
+
 def main(args):
     parser = get_config()
     all_args = parse_args(args, parser)
@@ -131,6 +163,9 @@ def main(args):
         run_dir = run_dir / curr_run
         if not run_dir.exists():
             os.makedirs(str(run_dir))
+
+    # logging
+    setup_logging(run_dir)
 
     setproctitle.setproctitle(str(all_args.algorithm_name) + "-" + str(all_args.env_name)
                               + "-" + str(all_args.experiment_name) + "@" + str(all_args.user_name))

@@ -16,6 +16,7 @@ class EndAltitudeReward(BaseRewardFunction):
     """
     def __init__(self, config):
         super().__init__(config)
+        self.reward_item_names = [self.__class__.__name__]
 
     def get_reward(self, task, env, agent_id):
         """
@@ -28,7 +29,7 @@ class EndAltitudeReward(BaseRewardFunction):
         Returns:
             (float): reward
         """
-        velocity_threthold = 1
+        velocity_threthold = 0.5
 
         ego_z = env.agents[agent_id].get_position()[-1] / 1000    # unit: km
         enm_z = env.agents[agent_id].enemies[0].get_position()[-1] / 1000    # unit: km
@@ -37,9 +38,9 @@ class EndAltitudeReward(BaseRewardFunction):
 
         missile_sim = env.agents[agent_id].check_missile_warning()
         if missile_sim is not None:
-            missile_v = missile_sim.get_velocity()
+            is_near_exhaustion = missile_sim.is_near_exhaustion
 
-            if np.linalg.norm(missile_v) / 340 <= velocity_threthold:
+            if is_near_exhaustion:
                 endgame_altitude_reward = np.clip(height_diff, -1, 3) + 1  # 高度差越高越好（-1~3）
             else:
                 endgame_altitude_reward = 0

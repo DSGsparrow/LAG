@@ -1,13 +1,27 @@
+import os
 import time
 import torch
 import logging
+import copy
 import numpy as np
 from typing import List
+import json
 from .base_runner import Runner, ReplayBuffer
 
 
 def _t2n(x):
     return x.detach().cpu().numpy()
+
+
+def get_next_directory(base_path):
+    """在 `base_path` 下找到下一个 `reward_trajectory_X` 目录的序号"""
+    existing_dirs = [d for d in os.listdir(base_path) if d.startswith("reward_trajectory_")]
+
+    # 获取所有的已有序号
+    existing_indices = sorted([int(d.split("_")[-1]) for d in existing_dirs if d.split("_")[-1].isdigit()])
+
+    next_index = (existing_indices[-1] + 1) if existing_indices else 1  # 找到下一个编号
+    return os.path.join(base_path, f"reward_trajectory_{next_index}")
 
 
 class JSBSimRunner(Runner):
@@ -150,6 +164,9 @@ class JSBSimRunner(Runner):
         self.timestamp = 0 # use for tacview real time render 
         
         while total_episodes < self.eval_episodes:
+            # get the date before the env resets
+            task = self.eval_envs.envs[0].task
+            reward_trajectory_list = [copy.deepcopy(reward_functions.reward_trajectory) for reward_functions in task.reward_functions]
 
             self.policy.prep_rollout()
             eval_actions, eval_rnn_states = self.policy.act(np.concatenate(eval_obs),
@@ -181,6 +198,25 @@ class JSBSimRunner(Runner):
             total_episodes += np.sum(eval_dones_env)
             eval_episode_rewards.append(eval_cumulative_rewards[eval_dones_env == True])
             eval_cumulative_rewards[eval_dones_env == True] = 0
+
+            # # 03-08 zht 保存奖励曲线
+            if eval_dones_env:
+                new_dir = get_next_directory(str(self.save_dir))
+                os.makedirs(new_dir, exist_ok=True)  # 创建目录
+
+                for i in range(len(reward_trajectory_list)):
+                    reward_trajectory = reward_trajectory_list[i]
+                    reward = task.reward_functions[i]
+                    reward_trajectory_json = {key: np.array(value).tolist() for key, value in
+                                              reward_trajectory.items()}
+                    save_dir = new_dir + "\\" + type(reward).__name__ + ".json"
+                    with open(save_dir, "w") as f:
+                        json.dump(reward_trajectory_json, f, indent=4)
+
+                # 记录对局胜负
+                success = eval_infos[0].get("success", False)
+                logging.info(
+                    " eval result, win ?: " + str(success))
 
             eval_masks = np.ones_like(eval_masks, dtype=np.float32)
             eval_masks[eval_dones_env == True] = np.zeros(((eval_dones_env == True).sum(), *eval_masks.shape[1:]), dtype=np.float32)
@@ -226,3 +262,4 @@ class JSBSimRunner(Runner):
         torch.save(policy_actor_state_dict, str(self.save_dir) + '/actor_latest.pt')
         policy_critic_state_dict = self.policy.critic.state_dict()
         torch.save(policy_critic_state_dict, str(self.save_dir) + '/critic_latest.pt')
+        torch.save(policy_actor_state_dict, str(self.save_dir) + f'/actor_{episode}.pt')

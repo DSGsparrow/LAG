@@ -35,8 +35,33 @@ shoot_interval >= self.min_attack_interval：距离上次发射间隔大于25s
   + 惩罚反向对冲，导弹降速就惩罚小一点
 + AltitudeReward 低于安全高度给负奖励，还向下飞就给速度的负奖励
 + event 被击中给-200的大惩罚
-+ EndRelativeAltitude: 敌方导弹速度低于声速时，相对高度越高越好
-+ 
++ EndRelativeAltitude: 
+  + 敌方导弹完成加速后，且速度低于1.2*150=180后
+  + 或导弹飞行48秒后，即指导能力只有0.2后
+  + 在simulator.py missile中加了一个导弹的能量耗尽标志函数
+
+记录奖励曲线：
++ 修改了reward_function_base.py中的get_reward_trajectory函数
++ 将奖励曲线以json形式传回来了
++ ~~修改了env_base.py中step函数，在回合结束时调用get_reward_trajectory函数~~
++ ~~然后保存奖励曲线到~~
++ 不对，还是不能在env_base里保存，怎么想都不合适
++ 改为在每次eval时记录测试的结果
++ 然后还想把运行时所有的logging.info都存到文件里
+
++ train_jsbsim.py中添加了设置logging的函数，main函数会调用
++ 现在可以将info都保存到运行路径中的run.log里
+
++ 然后在jsbsim_runner中添加了保存reward_trajectory的
++ 现在每个episode测试都会把这个episode的reward_trajectory保存起来
++ 到运行路径中的reward_trajectory_x里
+
+检查一下EndRelativeAltitude
+
+## 在task_base中get_termination中添加了当done时，在info中添加了
+info['success'] = success
+
+
 
 
 

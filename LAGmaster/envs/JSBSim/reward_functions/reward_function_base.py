@@ -1,6 +1,7 @@
 import numpy as np
 from abc import ABC, abstractmethod
 from collections import defaultdict
+import json
 
 
 class BaseRewardFunction(ABC):
@@ -62,10 +63,23 @@ class BaseRewardFunction(ABC):
         self.reward_trajectory[agent_id].append([reward, *render_items])
         return reward
 
-    def get_reward_trajectory(self):
+    def get_reward_trajectory(self, save_dir):
         """Get all the reward history of current episode.py
 
         Returns:
             (dict): {reward_name(str): reward_trajectory(np.array)}
         """
-        return dict(zip(self.reward_item_names, np.array(self.reward_trajectory.values()).transpose(2, 0, 1)))
+
+        a = self.reward_trajectory.items()
+
+        reward_trajectory_json = {key: np.array(value).tolist() for key, value in self.reward_trajectory.items()}
+
+        with open(save_dir) as f:
+            json.dump(reward_trajectory_json, f, indent=4)
+
+        # a = self.reward_trajectory.values()
+        # b = np.array(a)
+        # c = b.transpose(2, 0, 1)
+        # return dict(zip(self.reward_item_names, np.array(self.reward_trajectory.values()).transpose(2, 0, 1)))
+
+        return reward_trajectory_json
