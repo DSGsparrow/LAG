@@ -210,6 +210,7 @@ def render(args, ego_path, ego_ver):
         render_episode_rewards += render_rewards
         env.render(mode='txt', filepath=save_acmi_path)
         if render_dones.all():
+            a = render_infos[0]
             break
     render_infos = {}
     render_infos['render_episode_reward'] = render_episode_rewards

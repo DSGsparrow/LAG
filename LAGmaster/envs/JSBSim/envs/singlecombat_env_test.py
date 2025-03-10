@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import math
+import copy
 
 from .env_base import BaseEnv
 from ..tasks import SingleCombatTask, SingleCombatDodgeMissileTask, HierarchicalSingleCombatDodgeMissileTask, \
@@ -58,15 +59,17 @@ def random_init_state(radius_inner = 9000, radius_outer = 14000):
     return rand_lat, rand_lon, heading_deg, rand_distance
 
 
-class SingleCombatEnv(BaseEnv):
+class SingleCombatEnvTest(BaseEnv):
     """
     SingleCombatEnv is an one-to-one competitive environment.
     """
-    def __init__(self, config_name: str):
+    def __init__(self, config_name: str, enemy_positions):
         super().__init__(config_name)
         # Env-Specific initialization here!
         assert len(self.agents.keys()) == 2, f"{self.__class__.__name__} only supports 1v1 scenarios!"
         self.init_states = None
+        self.current_enemy = None
+        self.enemy_positions = copy.deepcopy(enemy_positions)
 
     def load_task(self):
         taskname = getattr(self.config, 'task', None)
@@ -87,14 +90,20 @@ class SingleCombatEnv(BaseEnv):
         else:
             raise NotImplementedError(f"Unknown taskname: {taskname}")
 
+    def set_enemy(self, enemy):
+        """设置当前敌机信息"""
+        self.current_enemy = enemy
+
     def reset(self) -> np.ndarray:
         self.current_step = 0
-        self.reset_simulators()
+        self.current_enemy = self.enemy_positions[0]
+        self.reset_simulators(self.current_enemy)
+        self.enemy_positions.pop(0)
         self.task.reset(self)
         obs = self.get_obs()
         return self._pack(obs)
 
-    def reset_simulators(self):
+    def reset_simulators(self, enemy):
         # # switch side
         # if self.init_states is None:
         #     self.init_states = [sim.init_state.copy() for sim in self.agents.values()]
@@ -111,8 +120,8 @@ class SingleCombatEnv(BaseEnv):
         if self.init_states is None:
             self.init_states = [sim.init_state.copy() for sim in self.agents.values()]
         # init_heading = self.np_random.uniform(0., 180.)
-        init_altitude = self.np_random.uniform(14000., 30000.)
-        init_velocities_u = self.np_random.uniform(400., 1000.)
+        # init_altitude = self.np_random.uniform(14000., 30000.)
+        # init_velocities_u = self.np_random.uniform(400., 1000.)
 
         rand_lat, rand_lon, heading_deg, rand_distance = random_init_state()
 
@@ -124,12 +133,22 @@ class SingleCombatEnv(BaseEnv):
             'ic_u_fps': 800.0,  # 速度 英尺每秒 243m/s
         })
 
+        # enemy_positions.append({
+        #     "lat": lat,
+        #     "lon": lon,
+        #     "distance": distance,
+        #     "angle": angle,
+        #     "alt": altitude,
+        #     "speed": speed,
+        #     "heading": heading  # 敌机朝向我机的角度
+        # })
+
         self.init_states[1].update({
-            'ic_long_gc_deg': rand_lon,  # 经度
-            'ic_lat_geod_deg': rand_lat,  # 纬度
-            'ic_h_sl_ft': init_altitude,  # 高度 英尺
-            'ic_psi_true_deg': heading_deg,  # 朝向
-            'ic_u_fps': init_velocities_u,  # 速度 英尺每秒 243m/s
+            'ic_long_gc_deg': enemy['lon'],  # 经度
+            'ic_lat_geod_deg': enemy['lat'],  # 纬度
+            'ic_h_sl_ft': enemy['alt'],  # 高度 英尺
+            'ic_psi_true_deg': enemy['heading'],  # 朝向
+            'ic_u_fps': enemy['speed'],  # 速度 英尺每秒 243m/s
         })
 
         # for init_state in self.init_states:

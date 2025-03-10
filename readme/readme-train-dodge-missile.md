@@ -65,6 +65,18 @@ info['success'] = success
 + 可以用render来测试
 
 
+## 测试各个情况下危险程度
+完成
+dodge_missile_test.py  
+调用singlecombat_env_test中SingleCombatEnvTest  
+区别在于在init中加入了enemy_positions的字典数据列表，从外部对敌方进行初始化  
+reset太坑了，每次step之后自动调用，还不能加输入  
+所以提前全部输进去，自己遍历  
+等训练完就可以测试，估计要测很久
+
+reset 返回值：ndarray(1,1,21)
+
+
 
 
 
