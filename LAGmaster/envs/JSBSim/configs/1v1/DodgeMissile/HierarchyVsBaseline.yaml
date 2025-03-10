@@ -64,4 +64,4 @@ AltitudeReward_Kv: 0.2
 EventDrivenReward_scale: 1
 EventDrivenReward_potential: true
 
-EndAltitudeReward_scale: 1
+EndAltitudeReward_scale: 10.0

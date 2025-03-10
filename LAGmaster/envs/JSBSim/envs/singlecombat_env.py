@@ -125,8 +125,8 @@ class SingleCombatEnv(BaseEnv):
         })
 
         self.init_states[1].update({
-            'ic_long_gc_deg': rand_lat,  # 经度
-            'ic_lat_geod_deg': rand_lon,  # 纬度
+            'ic_long_gc_deg': rand_lon,  # 经度
+            'ic_lat_geod_deg': rand_lat,  # 纬度
             'ic_h_sl_ft': init_altitude,  # 高度 英尺
             'ic_psi_true_deg': heading_deg,  # 朝向
             'ic_u_fps': init_velocities_u,  # 速度 英尺每秒 243m/s

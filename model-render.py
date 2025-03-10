@@ -156,19 +156,77 @@ def render_selfplay(args, ego_path, enm_path, ego_ver, enm_ver):
     return render_episode_rewards.item(), render_rewards.item()
 
 
-def render():
+def render(args, ego_path, ego_ver):
+    parser = get_config()
+    all_args = parse_args(args, parser)
 
+    env = make_train_env(all_args)
+    obs_space = env.observation_space
+    act_space = env.action_space
+    num_agents = env.num_agents
+    experiment_name = all_args.experiment_name
+
+    save_acmi_path = get_unique_filename('dodge missile', ego_ver, 'pursue')
+
+    # cuda
+    if all_args.cuda and torch.cuda.is_available():
+        logging.info("choose to use gpu...")
+        device = torch.device("cuda:0")  # use cude mask to control using which GPU
+        torch.set_num_threads(all_args.n_training_threads)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = True
+    else:
+        logging.info("choose to use cpu...")
+        device = torch.device("cpu")
+        torch.set_num_threads(all_args.n_training_threads)
+
+    # buffer
+    buffer = ReplayBuffer(all_args, num_agents, obs_space, act_space)
+
+    ego_policy = Policy(all_args, obs_space, act_space, device=device)
+
+    ego_policy.actor.load_state_dict(torch.load(ego_path, weights_only=True))
+    ego_policy.prep_rollout()
+
+
+    logging.info("\nStart render, render mode is {self.render_mode} ... ...")
+    render_episode_rewards = 0
+    render_obs = env.reset()
+    render_masks = np.ones((1, *buffer.masks.shape[2:]), dtype=np.float32)
+    render_rnn_states = np.zeros((1, *buffer.rnn_states_actor.shape[2:]), dtype=np.float32)
+    env.render(mode='txt', filepath=save_acmi_path)
+    while True:
+        ego_policy.prep_rollout()
+        render_actions, render_rnn_states = ego_policy.act(np.concatenate(render_obs),
+                                                            np.concatenate(render_rnn_states),
+                                                            np.concatenate(render_masks),
+                                                            deterministic=True)
+        render_actions = np.expand_dims(_t2n(render_actions), axis=0)
+        render_rnn_states = np.expand_dims(_t2n(render_rnn_states), axis=0)
+
+        # Obser reward and next obs
+        render_obs, render_rewards, render_dones, render_infos = env.step(render_actions)
+
+        render_episode_rewards += render_rewards
+        env.render(mode='txt', filepath=save_acmi_path)
+        if render_dones.all():
+            break
+    render_infos = {}
+    render_infos['render_episode_reward'] = render_episode_rewards
+    logging.info("render episode reward of agent: " + str(render_infos['render_episode_reward']))
 
 
 if __name__ == "__main__":
     args = sys.argv[1:]
     ego_ver = 'latest'
     enm_ver = '700'
-    ego_path = 'LAGmaster/scripts/results/SingleCombat/1v1/DodgeMissile/HierarchyVsBaseline/ppo/1v1/run38/actor_latest.pt'
+    ego_path = 'LAGmaster/scripts/results/SingleCombat/1v1/DodgeMissile/HierarchyVsBaseline/ppo/1v1/run42/actor_latest.pt'
     enm_path = 'LAGmaster/scripts/results/SingleCombat/1v1/ShootMissile/HierarchySelfplay/ppo/v1/run16/actor_' + enm_ver + '.pt'
     # enm_path = 'LAGmaster/envs/JSBSim/model/dodge_missile_model.pt'
-    episode_rewards, reward = render_selfplay(args, ego_path, enm_path, ego_ver, enm_ver)
+    # episode_rewards, reward = render_selfplay(args, ego_path, enm_path, ego_ver, enm_ver)
+    render(args, ego_path, ego_ver)
     a=0
+
 
     # data = []
     # for i in range(0, 1040, 10):

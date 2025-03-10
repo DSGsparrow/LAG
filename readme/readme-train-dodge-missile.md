@@ -61,6 +61,9 @@ shoot_interval >= self.min_attack_interval：距离上次发射间隔大于25s
 ## 在task_base中get_termination中添加了当done时，在info中添加了
 info['success'] = success
 
++ 搞错了，经纬度还搞反了
++ 可以用render来测试
+
 
 
 
