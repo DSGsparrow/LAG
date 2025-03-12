@@ -85,6 +85,15 @@ readme/readme-train-dodge-missile.md
 ### 初始化、reset 飞机状态：
 env_base.py中load_simulator函数调用yaml中init_state
 
+### record state
+single_combat_with_missile_task.py get_states  
+从仿真器获取双方飞机 经纬度、位置、速度
+
+env_base.py get_states  
+整合task传回来的数据，字典传回去，用_pack合成array(1,1,18)  
+
+弹的数据暂时先不加了，多个也不好处理
+
 
 > 张洪图 02-14-2025
 # LAG

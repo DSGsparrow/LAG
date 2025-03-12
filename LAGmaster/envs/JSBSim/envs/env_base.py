@@ -160,6 +160,14 @@ class BaseEnv(gymnasium.Env):
         """
         return dict([(agent_id, self.task.get_obs(self, agent_id)) for agent_id in self.agents.keys()])
 
+    def get_states(self):
+        """Returns all agent observations in a list.
+
+        NOTE: Agents should have access only to their local observations
+        during decentralised execution.
+        """
+        return dict([(agent_id, self.task.get_states(self, agent_id)) for agent_id in self.agents.keys()])
+
     def get_state(self):
         """Returns the global state.
 

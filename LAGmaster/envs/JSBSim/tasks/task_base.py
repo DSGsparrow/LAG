@@ -117,6 +117,11 @@ class BaseTask(ABC):
         """
         return np.zeros(2)
 
+    def get_states(self, env, agent_id):
+        """Extract useful information from environment for specific agent_id.
+        """
+        return np.zeros(2)
+
     def normalize_action(self, env, agent_id, action):
         """Normalize action to be consistent with action space.
         """

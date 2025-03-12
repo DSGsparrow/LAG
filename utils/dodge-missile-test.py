@@ -113,7 +113,7 @@ def _t2n(x):
     return x.detach().cpu().numpy()
 
 
-def get_unique_filename(experiment_name, ego_ver, enm_ver, folder="../render-result"):
+def get_unique_filename(experiment_name, ego_ver, enm_ver, folder="./render-result"):
     """
     生成唯一的实验结果文件名，防止覆盖已有文件。
 
@@ -212,6 +212,8 @@ def simulate_missile(enemy, ego_policy, env, buffer):
     save_acmi_path = get_unique_filename('dodge missile', 'lateset', 'pursue')
     env.render(mode='txt', filepath=save_acmi_path)
 
+    missile_done = False
+
     while True:
         ego_policy.prep_rollout()
         render_actions, render_rnn_states = ego_policy.act(np.concatenate(render_obs),
@@ -223,6 +225,13 @@ def simulate_missile(enemy, ego_policy, env, buffer):
 
         # Obser reward and next obs
         render_obs, render_rewards, render_dones, render_infos = env.step(render_actions)
+
+        if np.all(render_obs[0][0][15:21] == 0) and not render_dones[0] and not  missile_done:
+            # 弹失效，且为结束回合
+            missile_done = True
+            render_states = env.envs[0]._pack(env.envs[0].get_states()).reshape(-1,)
+
+            logging.info("missile down states " + str(render_states))
 
         render_episode_rewards += render_rewards
         env.render(mode='txt', filepath=save_acmi_path)
@@ -309,10 +318,45 @@ def plot_heatmap(results):
     plt.show()
 
 
+def setup_logging(run_dir):
+    """配置 logging，让日志既输出到终端，又写入 run.log 文件"""
+    os.makedirs(run_dir, exist_ok=True)  # 确保日志目录存在
+    log_file = os.path.join(run_dir, "run.log")  # 日志文件路径
+
+    # 获取全局 logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)  # 设定最低日志级别
+
+    # 清除已有的 handlers，防止重复添加
+    logger.handlers.clear()
+
+    # 终端 Handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+
+    # 文件 Handler
+    file_handler = logging.FileHandler(log_file, mode="a")  # "a" 追加模式
+    file_handler.setLevel(logging.INFO)
+
+    # 日志格式
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+
+    # 添加 handlers
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+
+    logging.info("init complete, log path: " + log_file)
+
+
 
 if __name__ == "__main__":
     args = sys.argv[1:]
     ego_path = 'LAGmaster/scripts/results/SingleCombat/1v1/DodgeMissile/HierarchyVsBaseline/ppo/1v1/run42/actor_latest.pt'
     save_path = '../test_result/dodge_test/simulation_results.json'
+
+    setup_logging('./render-result')
+
     results = run_simulation(args, ego_path, save_path=save_path)
     plot_heatmap(results)

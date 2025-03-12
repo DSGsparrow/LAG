@@ -28,6 +28,30 @@ class SingleCombatDodgeMissileTask(SingleCombatTask):
     def load_observation_space(self):
         self.observation_space = spaces.Box(low=-10, high=10., shape=(21,))
 
+    def get_states(self, env, agent_id):
+        ego_obs_list = np.array(env.agents[agent_id].get_property_values(self.state_var))
+        enm_obs_list = np.array(env.agents[agent_id].enemies[0].get_property_values(self.state_var))
+
+        ego_cur_ned = LLA2NEU(*ego_obs_list[:3], env.center_lon, env.center_lat, env.center_alt)
+        enm_cur_ned = LLA2NEU(*enm_obs_list[:3], env.center_lon, env.center_lat, env.center_alt)
+        ego_feature = np.array([*ego_obs_list[:3], *ego_cur_ned, *ego_obs_list[6:9]])
+        enm_feature = np.array([*enm_obs_list[:3], *enm_cur_ned, *enm_obs_list[6:9]])
+
+        state = np.zeros(len(ego_feature) + len(enm_feature))
+
+        for j in range(len(ego_feature)):
+            state[j] = ego_feature[j]
+        for j in range(len(enm_feature)):
+            state[len(ego_feature) + j] = enm_feature[j]
+
+        # missile_sim = env.agents[agent_id].check_missile_warning()
+        # if missile_sim is not None:
+        #     missile_feature = np.concatenate((missile_sim.get_position(), missile_sim.get_velocity()))
+        #     for j in range(6):
+        #         state[12+j] = missile_feature[j]
+
+        return state
+
     def get_obs(self, env, agent_id):
         """
         Convert simulation states into the format of observation_space
@@ -96,6 +120,8 @@ class SingleCombatDodgeMissileTask(SingleCombatTask):
             norm_obs[18] = ego_TA
             norm_obs[19] = R / 10000
             norm_obs[20] = side_flag
+        else:
+            pass
         return norm_obs
 
     def reset(self, env):
@@ -150,6 +176,9 @@ class HierarchicalSingleCombatDodgeMissileTask(HierarchicalSingleCombatTask, Sin
 
     def get_obs(self, env, agent_id):
         return SingleCombatDodgeMissileTask.get_obs(self, env, agent_id)
+
+    def get_states(self, env, agent_id):
+        return SingleCombatDodgeMissileTask.get_states(self, env, agent_id)
 
     def normalize_action(self, env, agent_id, action):
         return HierarchicalSingleCombatTask.normalize_action(self, env, agent_id, action)
