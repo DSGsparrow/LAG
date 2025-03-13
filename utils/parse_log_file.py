@@ -78,7 +78,7 @@ def parse_log_file(enemy_positions, log_file, output_file, state_file):
             reward = None  # 重置奖励
             state = None  # 重置状态信息
 
-    return output_file
+    return enemy['counter']
 
 
 if __name__ == '__main__':

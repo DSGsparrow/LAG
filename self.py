@@ -77,6 +77,6 @@ results = []
 enemy_positions = generate_enemy_positions()
 
 # 先读文件
-parse_log_file(enemy_positions, "./render-result/run.log",
-               "./test_result/dodge_test/parsed_results.json",
-               "./test_result/dodge_test/parsed_states.json")
+# parse_log_file(enemy_positions, "./render-result/run.log",
+#                "./test_result/dodge_test/parsed_results.json",
+#                "./test_result/dodge_test/parsed_states.json")

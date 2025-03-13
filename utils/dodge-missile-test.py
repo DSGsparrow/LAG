@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import matplotlib.pyplot as plt
 import json
@@ -228,21 +230,28 @@ def simulate_missile(enemy, ego_policy, env, buffer):
         # Obser reward and next obs
         render_obs, render_rewards, render_dones, render_infos = env.step(render_actions)
 
-        if np.all(render_obs[0][0][15:21] == 0) and not render_dones[0] and not  missile_done:
-            # 弹失效，且未结束回合
-            missile_done = True
-            render_states = env.envs[0]._pack(env.envs[0].get_states()).reshape(-1,)
+        # if np.all(render_obs[0][0][15:21] == 0) and not render_dones[0] and not missile_done:
+        #     # 弹失效，且未结束回合
+        #     missile_done = True
+        #     render_states = env.envs[0]._pack(env.envs[0].get_states()).reshape(-1,)
+        #
+        #     logging.info("missile down states " + str(render_states))
 
+        if render_dones.all():
+            success = render_infos[0]['dodge success']
             logging.info("missile down states " + str(render_states))
+            break
+
+        render_states = copy.deepcopy(env.envs[0]._pack(env.envs[0].get_states()).reshape(-1, ))
 
         render_episode_rewards += render_rewards
         env.render(mode='txt', filepath=save_acmi_path)
-        if render_dones.all():
-            success = render_infos[0]['success']
-            break
-        elif missile_done:
-            success = True
-            break
+        # if render_dones.all():
+        #     success = render_infos[0]['success']
+        #     break
+        # elif missile_done:
+        #     success = True
+        #     break
     render_infos = {}
     render_infos['render_episode_reward'] = render_episode_rewards
     logging.info("render episode reward of agent: " + str(render_infos['render_episode_reward']))
@@ -256,7 +265,7 @@ def run_simulation(args, ego_path, save_path="simulation_results.json"):
     enemy_positions = generate_enemy_positions()
 
     # 先读文件
-    parse_log_file(enemy_positions, "./render-result/run.log",
+    counter = parse_log_file(enemy_positions, "./render-result/run.log",
                    "./test_result/dodge_test/parsed_results.json",
                    "./test_result/dodge_test/parsed_states.json")
 

@@ -1,7 +1,7 @@
 from .termination_condition_base import BaseTerminationCondition
 
 
-class SafeReturn(BaseTerminationCondition):
+class DodgeMissileSafeReturn(BaseTerminationCondition):
     """
     SafeReturn.
     End up the simulation if:
@@ -42,11 +42,13 @@ class SafeReturn(BaseTerminationCondition):
             self.log(f'{agent_id} mission completed! Total Steps={env.current_step}')
             return True, True, info
 
-        # # not crushed or shot down and not under attack
-        # elif all([not missile.is_alive for missile in env.agents[agent_id].under_missiles]):
-        #     self.log(f'{agent_id} dodge succeeded! Total Steps={env.current_step}')
-        #     info['dodge success'] = True
-        #     return False, False, info
+        # not crushed or shot down and not under attack
+        elif all([not missile.is_alive for missile in env.agents[agent_id].under_missiles]) \
+            and agent_id == 'A0100':
+            # and not is_shotdown and not is_crash and doesn't care enemy
+            self.log(f'{agent_id} dodge succeeded! Total Steps={env.current_step}')
+            info['dodge success'] = True
+            return True, True, info
 
         else:
             return False, False, info

@@ -76,7 +76,14 @@ reset太坑了，每次step之后自动调用，还不能加输入
 
 reset 返回值：ndarray(1,1,21)
 
-
+## 躲弹结束回合标志
+只要敌方弹全部失效，而且自己存活，无论敌方死活，dodgemissile safe return 回true  
+然后回进env_base 的step  
+最后进了个_pack，对done这种大小只有1的数据只取自己的，因此A结束，回合结束  
+设置的确实牛逼  
+现在问题是状态没了，回合一结束肯定是reset了  
+保存上个回合的状态  
+然后是每个回合仿真完就保存result 和数据
 
 
 
