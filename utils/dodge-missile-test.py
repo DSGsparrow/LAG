@@ -15,6 +15,8 @@ from LAGmaster.algorithms.ppo.ppo_policy import PPOPolicy as Policy
 from LAGmaster.config import get_config
 from LAGmaster.runner.base_runner import Runner, ReplayBuffer
 
+from parse_log_file import parse_log_file
+
 
 # 设置参数
 my_aircraft = {
@@ -227,7 +229,7 @@ def simulate_missile(enemy, ego_policy, env, buffer):
         render_obs, render_rewards, render_dones, render_infos = env.step(render_actions)
 
         if np.all(render_obs[0][0][15:21] == 0) and not render_dones[0] and not  missile_done:
-            # 弹失效，且为结束回合
+            # 弹失效，且未结束回合
             missile_done = True
             render_states = env.envs[0]._pack(env.envs[0].get_states()).reshape(-1,)
 
@@ -237,6 +239,9 @@ def simulate_missile(enemy, ego_policy, env, buffer):
         env.render(mode='txt', filepath=save_acmi_path)
         if render_dones.all():
             success = render_infos[0]['success']
+            break
+        elif missile_done:
+            success = True
             break
     render_infos = {}
     render_infos['render_episode_reward'] = render_episode_rewards
@@ -249,6 +254,11 @@ def run_simulation(args, ego_path, save_path="simulation_results.json"):
     """运行仿真实验，统计数据，并保存到文件"""
     results = []
     enemy_positions = generate_enemy_positions()
+
+    # 先读文件
+    parse_log_file(enemy_positions, "./render-result/run.log",
+                   "./test_result/dodge_test/parsed_results.json",
+                   "./test_result/dodge_test/parsed_states.json")
 
     # env and policy and render set
     parser = get_config()
