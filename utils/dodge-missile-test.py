@@ -206,7 +206,7 @@ def render(args, ego_path, ego_ver):
     logging.info("render episode reward of agent: " + str(render_infos['render_episode_reward']))
 
 
-def simulate_missile(enemy, ego_policy, env, buffer):
+def simulate_missile(enemy, ego_policy, env, buffer, output_states_file):
     """模拟导弹发射，返回是否成功躲避"""
     render_episode_rewards = 0
     # env.envs[0].set_enemy(enemy)
@@ -220,6 +220,8 @@ def simulate_missile(enemy, ego_policy, env, buffer):
     logging.info('simulate init state: ' + str(enemy))
 
     missile_done = False
+
+    state = None
 
     while True:
         ego_policy.prep_rollout()
@@ -252,9 +254,9 @@ def simulate_missile(enemy, ego_policy, env, buffer):
                     "my_vx": render_states[6], "my_vy": render_states[7], "my_vz": render_states[8],
                     "enemy_lat": render_states[9], "enemy_lon": render_states[10], "enemy_alt": render_states[11],
                     "enemy_x": render_states[12], "enemy_y": render_states[13], "enemy_z": render_states[14],
-                    "enemy_vx": render_states[15], "enemy_vy": render_states[16], "enemy_vz": render_states[17]
+                    "enemy_vx": render_states[15], "enemy_vy": render_states[16], "enemy_vz": render_states[17],
                 }
-                state_file = "./test_result/dodge_test/parsed_states.json"
+                state_file = output_states_file  # "./test_result/dodge_test/parsed_states.json"
                 with open(state_file, 'a') as f:
                     json.dump(state, f)
                     f.write('\n')  # 每行存储一个 JSON 对象
@@ -275,18 +277,21 @@ def simulate_missile(enemy, ego_policy, env, buffer):
     render_infos['render_episode_reward'] = render_episode_rewards
     logging.info("render episode reward of agent: " + str(render_infos['render_episode_reward']))
 
-    return success, render_episode_rewards.item()
+    return success, render_episode_rewards.item(), state
 
 
-def run_simulation(args, ego_path, save_path="simulation_results.json"):
+def run_simulation(args, ego_path, log_file, output_file, output_states_file, gap):
+    # gap 跳过的对局设置数
     """运行仿真实验，统计数据，并保存到文件"""
-    results = []
+    # results = []
     enemy_positions = generate_enemy_positions()
 
     # 先读文件
-    counter = parse_log_file(enemy_positions, "./render-result/run.log",
-                   "./test_result/dodge_test/parsed_results.json",
-                   "./test_result/dodge_test/parsed_states.json")
+    # counter = parse_log_file(enemy_positions, log_file,
+    #                output_file,
+    #                output_states_file)
+    if gap:
+        enemy_positions = enemy_positions[gap:]
 
     # env and policy and render set
     parser = get_config()
@@ -324,7 +329,7 @@ def run_simulation(args, ego_path, save_path="simulation_results.json"):
     a = env.reset()
     # simulate circulate
     for enemy in enemy_positions:
-        success, render_episode_rewards = simulate_missile(enemy, ego_policy, env, buffer)
+        success, render_episode_rewards, state = simulate_missile(enemy, ego_policy, env, buffer, output_states_file)
 
         result = {
             "distance": enemy["distance"],
@@ -333,32 +338,33 @@ def run_simulation(args, ego_path, save_path="simulation_results.json"):
             "speed": enemy["speed"],
             "success": success,
             "reward": render_episode_rewards,
-            'counter': enemy["counter"],
+            "counter": enemy["counter"],
+            "state": state,
         }
 
-        output_file = "./test_result/dodge_test/parsed_results.json"
+        # output_file = "./test_result/dodge_test/parsed_results.json"
 
         # 追加写入 JSON 文件，避免数据丢失
         with open(output_file, 'a') as f:
             json.dump(result, f)
             f.write('\n')  # 每行存储一个 JSON 对象
 
-        results.append({
-            'counter': enemy["counter"],
-            "distance": enemy["distance"],
-            "angle": enemy["angle"],
-            "alt": enemy["alt"],
-            "speed": enemy["speed"],
-            "success": success,
-            "reward": render_episode_rewards
-        })
+        # results.append({
+        #     'counter': enemy["counter"],
+        #     "distance": enemy["distance"],
+        #     "angle": enemy["angle"],
+        #     "alt": enemy["alt"],
+        #     "speed": enemy["speed"],
+        #     "success": success,
+        #     "reward": render_episode_rewards
+        # })
 
     # 保存结果到文件
-    with open(save_path, "w") as f:
-        json.dump(results, f, indent=4)
-
-    print(f"Simulation results saved to {save_path}")
-    return results
+    # with open(save_path, "w") as f:
+    #     json.dump(results, f, indent=4)
+    #
+    # print(f"Simulation results saved to {save_path}")
+    # return results
 
 
 def plot_heatmap(results):
@@ -376,10 +382,11 @@ def plot_heatmap(results):
     plt.show()
 
 
-def setup_logging(run_dir):
+def setup_logging(run_dir, log_file = None):
     """配置 logging，让日志既输出到终端，又写入 run.log 文件"""
-    os.makedirs(run_dir, exist_ok=True)  # 确保日志目录存在
-    log_file = os.path.join(run_dir, "run.log")  # 日志文件路径
+    if not log_file:
+        os.makedirs(run_dir, exist_ok=True)  # 确保日志目录存在
+        log_file = os.path.join(run_dir, "run.log")  # 日志文件路径
 
     # 获取全局 logger
     logger = logging.getLogger()
@@ -413,8 +420,11 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     ego_path = 'LAGmaster/scripts/results/SingleCombat/1v1/DodgeMissile/HierarchyVsBaseline/ppo/1v1/run42/actor_latest.pt'
     save_path = './test_result/dodge_test/simulation_results.json'
+    log_file = "./render-result/run3.log"
+    output_file = "./test_result/dodge_test/parsed_results3.json"
+    output_states_file = "./test_result/dodge_test/parsed_states3.json"
 
-    setup_logging('./render-result')
+    setup_logging('./render-result', log_file)
 
-    results = run_simulation(args, ego_path, save_path=save_path)
-    plot_heatmap(results)
+    run_simulation(args, ego_path, log_file, output_file, output_states_file, 42601)
+    # plot_heatmap(results)

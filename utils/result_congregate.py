@@ -1,7 +1,7 @@
 import re
 import json
 import numpy as np
-import geopy
+import geopy.distance
 
 
 def parse_log_file(enemy_positions, log_file, output_file, state_file):
@@ -134,6 +134,9 @@ def parse_log_file2(enemy_positions, log_file, output_file, state_file):
             continue  # 跳过第一次出现 end_pattern 的行
 
         if not start_recording:
+            match = reward_pattern.search(line)
+            if match:
+                enemy_positions.pop(0)
             continue  # 直到第一次 end_pattern 之前都跳过
 
         # 捕获Total Steps
@@ -147,7 +150,7 @@ def parse_log_file2(enemy_positions, log_file, output_file, state_file):
                 capturing_state = False
                 state_str = ' '.join(state_buffer)  # 重新组合成一行
                 state_values = list(map(float, re.findall(r'[-+]?[0-9]*\.?[0-9]+(?:e[-+]?[0-9]+)?', state_str)))
-                state_values = state_values[-12:]  # 只取最后 12 个数值，过滤掉前面的时间信息
+                state_values = state_values[-18:]  # 只取最后 12 个数值，过滤掉前面的时间信息
                 if len(state_values) == 18:
                     state = {
                         "my_lat": state_values[0], "my_lon": state_values[1], "my_alt": state_values[2],
@@ -286,9 +289,9 @@ if __name__ == "__main__":
     enemy_positions = generate_enemy_positions()
 
     # 先读文件
-    counter = parse_log_file(enemy_positions, "./render-result/run.log",
-                             "./test_result/dodge_test/parsed_results1.json",
-                             "./test_result/dodge_test/parsed_states1.json")
+    counter = parse_log_file2(enemy_positions, "./render-result/run.log",
+                             "./test_result/dodge_test/parsed_results2.json",
+                             "./test_result/dodge_test/parsed_states2.json")
 
     # filter_json("./test_result/dodge_test/parsed_results.json", "./test_result/dodge_test/parsed_results1.json", 17949)
     # filter_json("./test_result/dodge_test/parsed_states.json", "./test_result/dodge_test/parsed_states1.json", 17741)
