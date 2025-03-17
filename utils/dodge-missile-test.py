@@ -51,7 +51,7 @@ def generate_enemy_positions():
     distances = np.linspace(8000, 15000, num=20)  # 8000-15000米
     angles = np.linspace(0, 360, num=36)  # 0-360度
     altitudes = np.linspace(14000, 30000, num=10)  # 14000-30000英尺
-    speeds = np.linspace(400, 1000, num=5)  # 400-1000英尺/秒
+    speeds = np.linspace(500, 1000, num=8)  # 400-1000英尺/秒
 
     enemy_positions = []
     counter = 0
@@ -117,7 +117,7 @@ def _t2n(x):
     return x.detach().cpu().numpy()
 
 
-def get_unique_filename(experiment_name, ego_ver, enm_ver, folder="./render-result"):
+def get_unique_filename(experiment_name, ego_ver, enm_ver, enemy, folder="./render-result"):
     """
     生成唯一的实验结果文件名，防止覆盖已有文件。
 
@@ -131,7 +131,8 @@ def get_unique_filename(experiment_name, ego_ver, enm_ver, folder="./render-resu
     if not os.path.exists(folder):
         os.makedirs(folder)  # 如果文件夹不存在，则创建它
 
-    txt_name = f'{experiment_name}-{ego_ver}-{enm_ver}'
+    txt_name = (f'{experiment_name}_{str(int(enemy["distance"]))}'
+                f'_{int(enemy["angle"])}_{int(enemy["alt"])}_{int(enemy["speed"])}')
 
     base_filename = os.path.join(folder, txt_name)
     filename = f"{base_filename}.txt.acmi"
@@ -213,8 +214,10 @@ def simulate_missile(enemy, ego_policy, env, buffer):
     render_obs = env.envs[0]._pack(env.envs[0].get_obs()).reshape(1, 1, -1)
     render_masks = np.ones((1, *buffer.masks.shape[2:]), dtype=np.float32)
     render_rnn_states = np.zeros((1, *buffer.rnn_states_actor.shape[2:]), dtype=np.float32)
-    save_acmi_path = get_unique_filename('dodge missile', 'lateset', 'pursue')
+    save_acmi_path = get_unique_filename('dm', 'l', 'p', enemy)
     env.render(mode='txt', filepath=save_acmi_path)
+
+    logging.info('simulate init state: ' + str(enemy))
 
     missile_done = False
 
@@ -238,8 +241,24 @@ def simulate_missile(enemy, ego_policy, env, buffer):
         #     logging.info("missile down states " + str(render_states))
 
         if render_dones.all():
-            success = render_infos[0]['dodge success']
-            logging.info("missile down states " + str(render_states))
+            success = render_infos[0].get("dodge success", False)
+            logging.info("missile dodge missile success " + str(success))
+            if success:
+                logging.info("missile down states " + str(render_states))
+
+                state = {
+                    "my_lat": render_states[0], "my_lon": render_states[1], "my_alt": render_states[2],
+                    "my_x": render_states[3], "my_y": render_states[4], "my_z": render_states[5],
+                    "my_vx": render_states[6], "my_vy": render_states[7], "my_vz": render_states[8],
+                    "enemy_lat": render_states[9], "enemy_lon": render_states[10], "enemy_alt": render_states[11],
+                    "enemy_x": render_states[12], "enemy_y": render_states[13], "enemy_z": render_states[14],
+                    "enemy_vx": render_states[15], "enemy_vy": render_states[16], "enemy_vz": render_states[17]
+                }
+                state_file = "./test_result/dodge_test/parsed_states.json"
+                with open(state_file, 'a') as f:
+                    json.dump(state, f)
+                    f.write('\n')  # 每行存储一个 JSON 对象
+
             break
 
         render_states = copy.deepcopy(env.envs[0]._pack(env.envs[0].get_states()).reshape(-1, ))
@@ -256,7 +275,7 @@ def simulate_missile(enemy, ego_policy, env, buffer):
     render_infos['render_episode_reward'] = render_episode_rewards
     logging.info("render episode reward of agent: " + str(render_infos['render_episode_reward']))
 
-    return success
+    return success, render_episode_rewards.item()
 
 
 def run_simulation(args, ego_path, save_path="simulation_results.json"):
@@ -305,13 +324,33 @@ def run_simulation(args, ego_path, save_path="simulation_results.json"):
     a = env.reset()
     # simulate circulate
     for enemy in enemy_positions:
-        success = simulate_missile(enemy, ego_policy, env, buffer)
-        results.append({
+        success, render_episode_rewards = simulate_missile(enemy, ego_policy, env, buffer)
+
+        result = {
             "distance": enemy["distance"],
             "angle": enemy["angle"],
             "alt": enemy["alt"],
             "speed": enemy["speed"],
-            "success": success
+            "success": success,
+            "reward": render_episode_rewards,
+            'counter': enemy["counter"],
+        }
+
+        output_file = "./test_result/dodge_test/parsed_results.json"
+
+        # 追加写入 JSON 文件，避免数据丢失
+        with open(output_file, 'a') as f:
+            json.dump(result, f)
+            f.write('\n')  # 每行存储一个 JSON 对象
+
+        results.append({
+            'counter': enemy["counter"],
+            "distance": enemy["distance"],
+            "angle": enemy["angle"],
+            "alt": enemy["alt"],
+            "speed": enemy["speed"],
+            "success": success,
+            "reward": render_episode_rewards
         })
 
     # 保存结果到文件
@@ -373,7 +412,7 @@ def setup_logging(run_dir):
 if __name__ == "__main__":
     args = sys.argv[1:]
     ego_path = 'LAGmaster/scripts/results/SingleCombat/1v1/DodgeMissile/HierarchyVsBaseline/ppo/1v1/run42/actor_latest.pt'
-    save_path = '../test_result/dodge_test/simulation_results.json'
+    save_path = './test_result/dodge_test/simulation_results.json'
 
     setup_logging('./render-result')
 

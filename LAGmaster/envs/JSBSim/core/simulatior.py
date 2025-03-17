@@ -370,6 +370,24 @@ class MissileSimulator(BaseSimulator):
         self._Rc = 300      # radius of explosion, unit: m
         self._v_min = 150   # minimun velocity, unit: m/s
 
+        # # 超视距制导参数
+        # self._midcourse_flag = True  # 中段制导阶段
+        # self._data_link_interval = 2  # 数据链更新间隔秒数
+        #
+        # self._g = 9.81  # gravitational acceleration
+        # self._t_max = 100  # time limitation of missile life
+        # self._t_thrust = 15  # time limitation of engine
+        # self._Isp = 280  # average specific impulse
+        # self._Length = 2.87
+        # self._Diameter = 0.127
+        # self._cD = 0.25  # aerodynamic drag factor
+        # self._m0 = 160  # mass, unit: kg
+        # self._dm = 8  # mass loss rate, unit: kg/s
+        # self._K = 3  # proportionality constant of proportional navigation
+        # self._nyz_max = 30  # max overload
+        # self._Rc = 300  # radius of explosion, unit: m
+        # self._v_min = 250  # minimun velocity, unit: m/s
+
     @property
     def is_alive(self):
         """Missile is still flying"""
@@ -455,7 +473,7 @@ class MissileSimulator(BaseSimulator):
         if distance < self._Rc and self.target_aircraft.is_alive:
             self.__status = MissileSimulator.HIT
             self.target_aircraft.shotdown()
-        elif (self._t > self._t_max) or (np.linalg.norm(self.get_velocity()) < self._v_min) \
+        elif (self._t > self._t_max) or (np.linalg.norm(self.get_velocity()) < self._v_min and self._t > self._t_thrust) \
                 or np.sum(self._distance_increment) >= self._distance_increment.maxlen or not self.target_aircraft.is_alive:
             self.__status = MissileSimulator.MISS
         else:
@@ -548,4 +566,101 @@ class MissileSimulator(BaseSimulator):
                 (self._t > self._t_thrust and np.linalg.norm(self.get_velocity()) < self._v_min * 1.2)  # 速度下降
                 or self.K < (self._K * 0.2)  # 机动能力下降 48s之后
         )
+
+
+# class BVRMissileSimulator(BaseSimulator):
+#     INACTIVE = -1
+#     LAUNCHED = 0
+#     HIT = 1
+#     MISS = 2
+#
+#     @classmethod
+#     def create(cls, parent: AircraftSimulator, target: AircraftSimulator, uid: str, missile_model: str = "AIM-9L"):
+#         assert parent.dt == target.dt, "integration timestep must be same!"
+#         missile = MissileSimulator(uid, parent.color, missile_model, parent.dt)
+#         missile.launch(parent)
+#         missile.target(target)
+#         # 把自己加到敌机的under_missile里
+#         return missile
+#
+#     def __init__(self,
+#                  uid="A0101",
+#                  color="Red",
+#                  model="AIM-9L",
+#                  dt=1 / 12):
+#         # 动力系统增强
+#         self._t_max = 100  # 最大飞行时间100秒
+#         self._t_thrust = 15  # 发动机工作时间15秒（双脉冲发动机）
+#         self._Isp = 280  # 比冲提升到280s
+#         self._m0 = 160  # 初始质量160kg
+#         self._dm = 8  # 燃料消耗率8kg/s
+#
+#         # 空气动力学优化（低空平飞）
+#         self._cD = 0.25  # 阻力系数降低
+#         self._v_min = 250  # 最小有效速度提升
+#         self._Rc = 400  # 杀伤半径
+#
+#         # 超视距制导参数
+#         self._midcourse_flag = True  # 中段制导阶段
+#         self._data_link_interval = 2  # 数据链更新间隔秒数
+#
+#     def launch(self, parent: AircraftSimulator):
+#         # 继承载机水平速度，保持平飞初始姿态
+#         self._posture[1] = parent.get_rpy()[1]  # 俯仰角与载机一致
+#         self._velocity[2] = 0  # 垂直速度归零
+#
+#     def _guidance(self):
+#         if self._midcourse_flag:
+#             # 中段制导：惯性导航+数据链修正
+#             if self.target_distance < 15000:  # 进入末段距离
+#                 self._midcourse_flag = False
+#             return self._midcourse_guidance()
+#         else:
+#             # 末段主动雷达制导
+#             return self._terminal_guidance()
+#
+#     def _midcourse_guidance(self):
+#         """中段能量最优平飞策略"""
+#         # 数据链周期性更新目标信息（仿真简化实现）
+#         if int(self._t) % self._data_link_interval == 0:
+#             self.target_aircraft.update_position()  # 假设有目标位置更新方法
+#
+#         # 保持高度策略
+#         current_alt = self._geodetic[2]
+#         alt_error = parent.launch_alt - current_alt  # 维持发射高度
+#         pitch_cmd = np.clip(alt_error * 0.005, -0.1, 0.1)  # 小角度俯仰调整
+#
+#         return [0, pitch_cmd]  # 无偏航指令，仅高度微调
+#
+#     def _terminal_guidance(self):
+#         # 预测目标运动（二阶预测模型）
+#         t_go = self.target_distance / np.linalg.norm(self.get_velocity())
+#         target_acc = self.target_aircraft.get_acceleration()  # 需要目标加速度信息
+#         predicted_pos = self.target_aircraft.get_position() + \
+#                         self.target_aircraft.get_velocity() * t_go + \
+#                         0.5 * target_acc * t_go ** 2
+#
+#         # 计算视线角变化率
+#         LOS = predicted_pos - self.get_position()
+#         LOS_prev = self._prev_LOS  # 需要保存上一周期LOS
+#         LOS_rate = (LOS - LOS_prev) / self.dt
+#         self._prev_LOS = LOS
+#
+#         # 生成过载指令
+#         acc_cmd = self.K * LOS_rate * np.linalg.norm(self.get_velocity())
+#         return np.clip(acc_cmd / 9.81, -self._nyz_max, self._nyz_max)
+#
+#     @property
+#     def S(self):
+#         """优化低空平飞气动面积"""
+#         base_area = np.pi * (self._Diameter / 2) ** 2
+#         # 平飞时弹体投影面积最小化
+#         return base_area * (1 + 0.1 * abs(np.sin(self._posture[1]))
+#
+#                             @ property
+#
+#     def rho(self):
+#         """低空空气密度优化计算（<10km）"""
+#         # 使用国际标准大气模型（ISA）低空简化版
+#         return 1.225 * (288.15 / (288.15 - 0.0065 * self._geodetic[2])) ** 4.25588
 

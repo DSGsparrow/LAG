@@ -101,6 +101,7 @@ class SingleCombatEnvTest(BaseEnv):
         self.enemy_positions.pop(0)
         self.task.reset(self)
         obs = self.get_obs()
+        self._create_records = False
         return self._pack(obs)
 
     def reset_simulators(self, enemy):

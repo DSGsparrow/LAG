@@ -105,6 +105,7 @@ class BaseEnv(gymnasium.Env):
         # reset task
         self.task.reset(self)
         obs = self.get_obs()
+        self._create_records = False
         return self._pack(obs)
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, dict]:

@@ -18,8 +18,8 @@ def parse_log_file(enemy_positions, log_file, output_file, state_file):
     state_buffer = []  # 用于处理换行的状态
     capturing_state = False  # 记录是否在捕获状态数据
 
-    # 去除前 5012 行
-    lines = lines[5135:]
+    # # 去除前 5012 行
+    # lines = lines[5135:]
 
     for line in lines:
         if capturing_state:
@@ -61,6 +61,7 @@ def parse_log_file(enemy_positions, log_file, output_file, state_file):
                 "speed": enemy["speed"],
                 "success": success,
                 "reward": reward,
+                'counter': enemy["counter"],
             }
 
             # 追加写入 JSON 文件，避免数据丢失
