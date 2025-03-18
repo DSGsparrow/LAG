@@ -1,6 +1,23 @@
 import numpy as np
 import random
 import math
+import geopy.distance
+
+
+# 设置参数
+my_aircraft = {
+    "lat": 60.0,  # 北纬60度
+    "lon": 120.0,  # 东经120度
+    "alt": 20000,  # 高度 20000 英尺
+    "heading": 0  # 朝向正北（0度）
+}
+
+
+def calculate_enemy_position(distance, angle):
+    """根据距离和角度计算敌机的经纬度"""
+    origin = (my_aircraft["lat"], my_aircraft["lon"])
+    destination = geopy.distance.distance(meters=distance).destination(origin, angle)
+    return destination.latitude, destination.longitude  # 纬度，经度
 
 
 def random_init_state(radius_inner = 9000, radius_outer = 14000):

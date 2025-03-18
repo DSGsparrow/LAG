@@ -46,6 +46,10 @@ def calculate_bearing(lat1, lon1, lat2, lon2):
     return (bearing + 360) % 360  # 转换为 0-360 度范围
 
 
+def generate_random_enemy_positions():
+    pass
+
+
 def generate_enemy_positions():
     """遍历敌机位置、速度、高度的所有可能情况，并计算其经纬度和朝向"""
     distances = np.linspace(8000, 15000, num=20)  # 8000-15000米

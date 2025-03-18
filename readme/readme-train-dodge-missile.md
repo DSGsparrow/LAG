@@ -91,7 +91,8 @@ render一下看看
 render有个标志位self._create_records = False  
 因为之前没有reset，结果导致每次新回合的render都有问题，现在把重置加到了reset里
 
-
+## 尝试多环境测试，随机初始条件，不然太慢了
+在singlecombat_env_test.py中修改新的step
 
 
 
