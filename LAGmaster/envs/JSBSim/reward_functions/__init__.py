@@ -6,3 +6,4 @@ from .heading_reward import HeadingReward
 from .missile_posture_reward import MissilePostureReward
 from .shoot_penalty_reward import ShootPenaltyReward
 from .end_altitude_reward import EndAltitudeReward
+from .shoot_gap_penalty_reward import ShootGapPenaltyReward

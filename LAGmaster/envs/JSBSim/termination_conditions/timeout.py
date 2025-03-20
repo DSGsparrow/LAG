@@ -26,5 +26,6 @@ class Timeout(BaseTerminationCondition):
         done = env.current_step >= self.max_steps
         if done:
             self.log(f"{agent_id} step limits! Total Steps={env.current_step}")
+            info['timeout'] = True
         success = False
         return done, success, info

@@ -22,6 +22,11 @@ singlecombat_with_missle_task.py
 我不知道为什么它的step没有调用baseline  
 
 ## 奖励和终止条件
+奖励增加了打弹间隔小于10 给-25的惩罚  
+终止加了shoot_safe_return  
+
+
+这怎么敌机这么抽象？
 
 
 

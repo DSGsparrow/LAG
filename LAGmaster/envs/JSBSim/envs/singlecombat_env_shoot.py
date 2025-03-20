@@ -64,7 +64,7 @@ def random_init_state(radius_inner = 9000, radius_outer = 14000):
     return rand_lat, rand_lon, heading_deg, rand_distance
 
 
-def get_unique_filename(enm_ver, folder="./render_result_random"):
+def get_unique_filename(env_id, enm_ver, folder="./render_result_random"):
     """
     生成唯一的实验结果文件名，防止覆盖已有文件。
 
@@ -78,7 +78,7 @@ def get_unique_filename(enm_ver, folder="./render_result_random"):
     if not os.path.exists(folder):
         os.makedirs(folder)  # 如果文件夹不存在，则创建它
 
-    txt_name = f'train_shoot_{enm_ver}'
+    txt_name = f'env_{env_id}_{enm_ver}'
 
     base_filename = os.path.join(folder, txt_name)
     filename = f"{base_filename}.txt.acmi"
@@ -95,16 +95,17 @@ class SingleCombatEnvShoot(BaseEnv):
     """
     SingleCombatEnv is an one-to-one competitive environment.
     """
-    def __init__(self, config_name: str):
+    def __init__(self, config_name: str, env_id):
         super().__init__(config_name)
         # Env-Specific initialization here!
         assert len(self.agents.keys()) == 2, f"{self.__class__.__name__} only supports 1v1 scenarios!"
         self.init_states = None
         self.current_enemy = None
+        self.env_id = env_id
         # self.enemy_positions = copy.deepcopy(enemy_positions)
         self.cumulative_reward = 0
         self.render_path = getattr(self.config, 'render_path', "render_train/shoot")
-        self.render_file = get_unique_filename('baseline_dodge', self.render_path)
+        self.render_file = get_unique_filename(env_id, 'baseline_dodge', self.render_path)
 
     def load_task(self):
         taskname = getattr(self.config, 'task', None)
@@ -159,6 +160,7 @@ class SingleCombatEnvShoot(BaseEnv):
         self.task.reset(self)
         obs = self.get_obs()
         self._create_records = False
+        self.render_file = get_unique_filename(self.env_id, 'baseline_dodge', self.render_path)
         return self._pack(obs)
 
     def reset_simulators(self, enemy):
@@ -241,8 +243,8 @@ class SingleCombatEnvShoot(BaseEnv):
         self.cumulative_reward += ego_reward.item()
 
         if ego_done:
-            dodge_success = info.get("dodge success", False)
-            if dodge_success:
+            shoot_success = info.get("shoot success", False)
+            if not shoot_success:
                 render_states = self._pack(self.get_states()).reshape(-1, )
                 state = {
                     "my_lat": render_states[0], "my_lon": render_states[1], "my_alt": render_states[2],
@@ -264,12 +266,13 @@ class SingleCombatEnvShoot(BaseEnv):
                       "ego_alt": self.current_enemy["ego_alt"],
                       "ego_speed": self.current_enemy["ego_speed"],
 
-                      "success": dodge_success,
+                      "success": shoot_success,
                       "reward": self.cumulative_reward,
                       "total_steps": total_steps,  # 新增 Total Steps 记录
                       "state": state,
                       }
 
+            # logger = logging.getLogger()  # 继承主 logger
             logging.info("render_result: " + str(result))
 
         return self._pack(obs), ego_reward, ego_done, info

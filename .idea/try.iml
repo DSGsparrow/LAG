@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/LAGmaster" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/LAGmaster/scripts/results" />
       <excludeFolder url="file://$MODULE_DIR$/render-result" />
+      <excludeFolder url="file://$MODULE_DIR$/render_train" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.8 sb3" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

@@ -340,6 +340,9 @@ class MissileSimulator(BaseSimulator):
         missile = MissileSimulator(uid, parent.color, missile_model, parent.dt)
         missile.launch(parent)
         missile.target(target)
+
+        parent.num_left_missiles -= 1
+
         # 把自己加到敌机的under_missile里
         return missile
 

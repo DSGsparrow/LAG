@@ -6,6 +6,7 @@ import sys
 import parser
 
 from stable_baselines3.common.vec_env.util import obs_space_info
+from torch.backends.cudnn import deterministic
 
 from LAGmaster.algorithms.ppo.ppo_policy import PPOPolicy as Policy
 from LAGmaster.config import get_config
@@ -530,22 +531,35 @@ def set_default_params(parser):
     return parser
 
 
+def parse_args(args, parser):
+    group = parser.add_argument_group("JSBSim Env parameters")
+    group.add_argument('--scenario-name', type=str, default='singlecombat_simple',
+                       help="Which scenario to run on")
+    group.add_argument('--render-mode', type=str, default='txt',
+                       help="txt or real_time")
+    all_args = parser.parse_known_args(args)[0]
+    return all_args
+
 
 class DodgeMissileAgent_self(BaselineAgent):
     def __init__(self) -> None:
         super().__init__()
-        self.model_path = get_root_dir() + '/model/dodge_missile_model.pt'
-        self.actor = BaselineActor(input_dim=21, use_mlp_actlayer=True)
-        self.actor.load_state_dict(torch.load(self.model_path, map_location=torch.device('cpu'), weights_only=True))
+        # self.model_path = get_root_dir() + '/model/dodge_missile_model.pt'
+        # self.actor = BaselineActor(input_dim=21, use_mlp_actlayer=True)
+        # self.actor.load_state_dict(torch.load(self.model_path, map_location=torch.device('cpu'), weights_only=True))
 
         self.model_path_self = 'LAGmaster/scripts/results/SingleCombat/1v1/DodgeMissile/HierarchyVsBaseline/ppo/1v1/run42/actor_latest.pt'
 
         parser = get_config()
-        parser = set_default_params(parser)
-        all_args = parser.parse_args([])
+        args = sys.argv[1:]
+
+        # parser = set_default_params(parser)
+        # parser = get_config()
+        all_args = parse_args(args, parser)
+
         obs_space = spaces.Box(low=-10, high=10., shape=(21,))
         act_space = spaces.MultiDiscrete([3, 5, 3])
-        device = torch.device("cuda:0")
+        device = torch.device("cpu")
         self.actor_self = Policy(all_args, obs_space, act_space, device=device)
 
         self.actor_self.actor.load_state_dict(torch.load(self.model_path_self, weights_only=True))
@@ -567,6 +581,71 @@ class DodgeMissileAgent_self(BaselineAgent):
             c.velocities_vc_mps,                # 12. vc        (unit: m/s)
         ]
         self.reset()
+
+        self.lowlevel_policy = BaselineActor()
+        self.lowlevel_policy.load_state_dict(
+            torch.load(get_root_dir() + '/model/baseline_model.pt', map_location=torch.device('cpu'),
+                       weights_only=True))
+        self.lowlevel_policy.eval()
+        self.norm_delta_altitude = np.array([0.1, 0, -0.1])
+        self.norm_delta_heading = np.array([-np.pi / 6, -np.pi / 12, 0, np.pi / 12, np.pi / 6])
+        self.norm_delta_velocity = np.array([0.05, 0, -0.05])
+
+        self.observation_space = spaces.Box(low=-10, high=10., shape=(15,))
+
+    def get_obs(self, env, agent_id):
+        """
+        Convert simulation states into the format of observation_space
+
+        ------
+        Returns: (np.ndarray)
+        - ego info
+            - [0] ego altitude           (unit: 5km)
+            - [1] ego_roll_sin
+            - [2] ego_roll_cos
+            - [3] ego_pitch_sin
+            - [4] ego_pitch_cos
+            - [5] ego v_body_x           (unit: mh)
+            - [6] ego v_body_y           (unit: mh)
+            - [7] ego v_body_z           (unit: mh)
+            - [8] ego_vc                 (unit: mh)
+        - relative enm info
+            - [9] delta_v_body_x         (unit: mh)
+            - [10] delta_altitude        (unit: km)
+            - [11] ego_AO                (unit: rad) [0, pi]
+            - [12] ego_TA                (unit: rad) [0, pi]
+            - [13] relative distance     (unit: 10km)
+            - [14] side_flag             1 or 0 or -1
+        """
+        norm_obs = np.zeros(15)
+        ego_obs_list = np.array(env.agents[agent_id].get_property_values(self.state_var))
+        enm_obs_list = np.array(env.agents[agent_id].enemies[0].get_property_values(self.state_var))
+        # (0) extract feature: [north(km), east(km), down(km), v_n(mh), v_e(mh), v_d(mh)]
+        ego_cur_ned = LLA2NEU(*ego_obs_list[:3], env.center_lon, env.center_lat, env.center_alt)
+        enm_cur_ned = LLA2NEU(*enm_obs_list[:3], env.center_lon, env.center_lat, env.center_alt)
+        ego_feature = np.array([*ego_cur_ned, *(ego_obs_list[6:9])])
+        enm_feature = np.array([*enm_cur_ned, *(enm_obs_list[6:9])])
+        # (1) ego info normalization
+        norm_obs[0] = ego_obs_list[2] / 5000            # 0. ego altitude   (unit: 5km)
+        norm_obs[1] = np.sin(ego_obs_list[3])           # 1. ego_roll_sin
+        norm_obs[2] = np.cos(ego_obs_list[3])           # 2. ego_roll_cos
+        norm_obs[3] = np.sin(ego_obs_list[4])           # 3. ego_pitch_sin
+        norm_obs[4] = np.cos(ego_obs_list[4])           # 4. ego_pitch_cos
+        norm_obs[5] = ego_obs_list[9] / 340             # 5. ego v_body_x   (unit: mh)
+        norm_obs[6] = ego_obs_list[10] / 340            # 6. ego v_body_y   (unit: mh)
+        norm_obs[7] = ego_obs_list[11] / 340            # 7. ego v_body_z   (unit: mh)
+        norm_obs[8] = ego_obs_list[12] / 340            # 8. ego vc   (unit: mh)
+        # (2) relative info w.r.t enm state
+        # 我的视线角、敌方视线角、距离（二维）、相对运动方向（向右1，向左-1）
+        ego_AO, ego_TA, R, side_flag = get2d_AO_TA_R(ego_feature, enm_feature, return_side=True)
+        norm_obs[9] = (enm_obs_list[9] - ego_obs_list[9]) / 340
+        norm_obs[10] = (enm_obs_list[2] - ego_obs_list[2]) / 1000
+        norm_obs[11] = ego_AO
+        norm_obs[12] = ego_TA
+        norm_obs[13] = R / 10000
+        norm_obs[14] = side_flag
+        norm_obs = np.clip(norm_obs, self.observation_space.low, self.observation_space.high)
+        return norm_obs
 
     def get_observation(self, sim: AircraftSimulator):
         norm_obs = np.zeros(21)
@@ -615,12 +694,37 @@ class DodgeMissileAgent_self(BaselineAgent):
         norm_obs = np.expand_dims(norm_obs, axis=0)
         return norm_obs
 
+    def normalize_action(self, env, agent_id, action):
+        """Convert high-level action into low-level action.
+        """
+        # generate low-level input_obs
+        raw_obs = self.get_obs(env, agent_id)
+        input_obs = np.zeros(12)
+        # (1) delta altitude/heading/velocity
+        input_obs[0] = self.norm_delta_altitude[action[0]]
+        input_obs[1] = self.norm_delta_heading[action[1]]
+        input_obs[2] = self.norm_delta_velocity[action[2]]
+        # (2) ego info
+        input_obs[3:12] = raw_obs[:9]
+        input_obs = np.expand_dims(input_obs, axis=0)
+        # output low-level action
+        _action, _rnn_states = self.lowlevel_policy(input_obs, self._inner_rnn_states)
+        action = _action.detach().cpu().numpy().squeeze(0)
+        self._inner_rnn_states = _rnn_states.detach().cpu().numpy()
+        # normalize low-level action
+        norm_act = np.zeros(4)
+        norm_act[0] = action[0] / 20 - 1.
+        norm_act[1] = action[1] / 20 - 1.
+        norm_act[2] = action[2] / 20 - 1.
+        norm_act[3] = action[3] / 58 + 0.4
+        return norm_act
+
     def get_action(self, sim: AircraftSimulator):
         obs = self.get_observation(sim)
-        _action, self.rnn_states = self.actor(obs, self.rnn_states)
-        action = _action.squeeze().detach().cpu().numpy().squeeze()
+        # _action, self.rnn_states = self.actor(obs, self.rnn_states)
+        # action = _action.squeeze().detach().cpu().numpy().squeeze()
 
-        _action, self.rnn_states = self.actor(obs, self.rnn_states_self, self.masks_self)
+        _action, self.rnn_states = self.actor_self.act(obs, self.rnn_states_self, self.masks_self, deterministic=True)
         action = _action.squeeze().detach().cpu().numpy().squeeze()
 
         return action
@@ -629,3 +733,4 @@ class DodgeMissileAgent_self(BaselineAgent):
         self.rnn_states = np.zeros((1, 1, 128))
         self.rnn_states_self = np.zeros((1, 1, 128))
         self.masks_self = np.ones((1, 1))
+        self._inner_rnn_states = np.zeros((1, 1, 128))

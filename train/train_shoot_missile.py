@@ -18,9 +18,9 @@ from LAGmaster.envs.JSBSim.envs import SingleCombatEnv, SingleControlEnv, Single
 class SB3SingleCombatEnv(gymnasium.Env):
     """将 SingleCombatEnvTest 适配为 SB3 兼容的 Gym 环境"""
 
-    def __init__(self, config_name):
+    def __init__(self, env_id, config_name):
         super(SB3SingleCombatEnv, self).__init__()
-        self.env = SingleCombatEnvShoot(config_name)  # 你的原始环境
+        self.env = SingleCombatEnvShoot(config_name, env_id)  # 你的原始环境
         # obs_shape = self.env.get_obs().shape[0]  # 获取观测空间维度
         # act_shape = self.env.get_action_space().shape[0]  # 获取动作空间维度
         # 继承原始环境的动作空间和观察空间
@@ -52,18 +52,27 @@ class SB3SingleCombatEnv(gymnasium.Env):
     def step(self, action):
         # 将长度为 4 的动作转换为长度为 (1,4) 的动作
         # actual_action = action.reshape(-1, 3)  # 取第一个值
+        # 因为内部的环境，假设可能有多架飞机在控制，所有第一位都加了个序号
+        # reward 和dones什么的直接取值
 
         action = np.expand_dims(action, axis=0) if action.ndim == 1 else action
 
         obs, rewards, dones, info = self.env.step(action)
-        observation, reward, terminated, truncated, info = obs, rewards, dones, dones, info
+
+        timeout = info.get('timeout', False)
+
+        observation, reward, terminated, truncated, info = obs[0], rewards.item(), dones.item(), timeout, info
+
+        # logging.info('test')
 
         return observation, reward, terminated, truncated, info
 
     def reset(self, seed=None, options=None):
         """重置环境，支持 `seed` 以适配 SB3"""
         super().reset(seed=seed)  # 让 Gym 兼容 SB3 的 `seed`
-        return self.env.reset(), None
+        obs = self.env.reset()
+        observation = obs[0]
+        return observation, None
 
     def close(self):
         return self.env.close()
@@ -184,12 +193,8 @@ def get_config():
     return parser
 
 
-def setup_logging(run_dir, log_file = None):
+def setup_logging(log_file = None):
     """配置 logging，让日志既输出到终端，又写入 run.log 文件"""
-    if not log_file:
-        os.makedirs(run_dir, exist_ok=True)  # 确保日志目录存在
-        log_file = os.path.join(run_dir, "run.log")  # 日志文件路径
-
     # 获取全局 logger
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)  # 设定最低日志级别
@@ -206,7 +211,7 @@ def setup_logging(run_dir, log_file = None):
     file_handler.setLevel(logging.INFO)
 
     # 日志格式
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s [PID %(process)d]- %(message)s")
     console_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
 
@@ -219,17 +224,18 @@ def setup_logging(run_dir, log_file = None):
 
 # ========== 6. 训练 PPO ==========
 if __name__ == "__main__":
-    num_envs = 1  # 设定 8 个并行环境（根据 GPU 性能调整）
+    num_envs = 16  # 设定 8 个并行环境（根据 GPU 性能调整）
 
-    log_file = "train/result/train_shoot.log"
+    log_file = "./train/result/train_shoot.log"
 
-    # setup_logging('./render-result', log_file)
-
+    # setup_logging(log_file)
     # 创建并行环境
-    def make_env():
-        return SB3SingleCombatEnv(config_name='1v1/ShootMissile/HierarchyVsBaseline_self')
+    def make_env(env_id):
+        setup_logging(log_file)
+        return SB3SingleCombatEnv(env_id, config_name='1v1/ShootMissile/HierarchyVsBaseline_self')
 
-    env = SubprocVecEnv([lambda: make_env() for _ in range(num_envs)])
+    # env = SubprocVecEnv([lambda: make_env(env_id) for env_id in range(num_envs)])
+    env = SubprocVecEnv([lambda env_id=env_id: make_env(env_id) for env_id in range(num_envs)])
 
     # 定义 PPO 模型（自定义 MLP 作为特征提取器）
     policy_kwargs = dict(

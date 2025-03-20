@@ -1,10 +1,13 @@
 import numpy as np
 from gymnasium import spaces
 from collections import deque
+import logging
 
 from .singlecombat_task import SingleCombatTask, HierarchicalSingleCombatTask
-from ..reward_functions import AltitudeReward, PostureReward, MissilePostureReward, EventDrivenReward, ShootPenaltyReward
-from ..termination_conditions import ExtremeState, LowAltitude, Overload, Timeout, DodgeMissileSafeReturn, SafeReturn
+from ..reward_functions import AltitudeReward, PostureReward, MissilePostureReward, EventDrivenReward
+from ..reward_functions import ShootPenaltyReward, ShootGapPenaltyReward
+from ..termination_conditions import ExtremeState, LowAltitude, Overload, Timeout, DodgeMissileSafeReturn
+from ..termination_conditions import SafeReturn, ShootSafeReturn
 from ..reward_functions import EndAltitudeReward
 from ..core.simulatior import MissileSimulator
 from ..utils.utils import LLA2NEU, get_AO_TA_R
@@ -239,6 +242,7 @@ class SingleCombatShootMissileTask(SingleCombatDodgeMissileTask):
                 env.add_temp_simulator(
                     MissileSimulator.create(parent=agent, target=agent.enemies[0], uid=new_missile_uid))
                 self.remaining_missiles[agent_id] -= 1
+                logging.info(f'{agent_id} launch mission! Total Steps={env.current_step}')
 
 
 class HierarchicalSingleCombatShootTask(HierarchicalSingleCombatTask, SingleCombatShootMissileTask):
@@ -248,7 +252,16 @@ class HierarchicalSingleCombatShootTask(HierarchicalSingleCombatTask, SingleComb
             PostureReward(self.config),
             AltitudeReward(self.config),
             EventDrivenReward(self.config),
-            ShootPenaltyReward(self.config)
+            ShootPenaltyReward(self.config),
+            ShootGapPenaltyReward(self.config),
+        ]
+
+        self.termination_conditions = [
+            LowAltitude(self.config),
+            ExtremeState(self.config),
+            Overload(self.config),
+            ShootSafeReturn(self.config),
+            Timeout(self.config),
         ]
 
     def load_observation_space(self):
@@ -266,15 +279,50 @@ class HierarchicalSingleCombatShootTask(HierarchicalSingleCombatTask, SingleComb
         """
 
         if self.use_baseline and agent_id in env.enm_ids:
-            action = self.baseline_agent.get_action(env.agents[agent_id])
-            return action
+            if self.config.baseline_type == 'dodge_self':
+                missile_sim = env.agents[agent_id].check_missile_warning()
+                # 没有被打就直飞
+                if missile_sim is None:
+                    action = np.array([20, 18.6, 20, 0])
+                    norm_act = np.zeros(4)
+                    norm_act[0] = action[0] / 20 - 1.  # 0~40 => -1~1
+                    norm_act[1] = action[1] / 20 - 1.  # 0~40 => -1~1
+                    norm_act[2] = action[2] / 20 - 1.  # 0~40 => -1~1
+                    norm_act[3] = action[3] / 58 + 0.4  # 0~29 => 0.4~0.9
+                    norm_action = norm_act
+                else:
+                    action = self.baseline_agent.get_action(env.agents[agent_id])
+
+                    norm_action = self.baseline_agent.normalize_action(env, agent_id, action)
+
+                return norm_action
+
+            else:
+                # 用dodge无需加工
+                action = self.baseline_agent.get_action(env.agents[agent_id])
+
+                return action
 
         else:
             self._shoot_action[agent_id] = action[-1]
+
+            # prior
+            obs = self.get_obs(env, agent_id)
+            ego_AO = obs[11] / np.pi * 180
+            ego_TA = obs[12] / np.pi * 180
+            distance = obs[13]
+
+            if distance > 1:  # 距离超过10公里
+                self._shoot_action[agent_id] = 0
+
+            elif ego_AO > 50.:  # 视线角过大不可以打弹
+                self._shoot_action[agent_id] = 0
+
             return HierarchicalSingleCombatTask.normalize_action(self, env, agent_id, action[:-1].astype(np.int32))
 
     def reset(self, env):
         self._inner_rnn_states = {agent_id: np.zeros((1, 1, 128)) for agent_id in env.agents.keys()}
+        self.baseline_agent.reset()
         SingleCombatShootMissileTask.reset(self, env)
 
     def step(self, env):
