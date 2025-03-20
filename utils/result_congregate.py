@@ -94,11 +94,11 @@ def parse_log_file(enemy_positions, log_file, output_file, state_file):
             state = None
             total_steps = None  # 清空 Total Steps，避免跨回合污染数据
 
-        end_match = end_pattern.search(line)
-        if end_match:
-            end_counter += 1
-            if end_counter > 1:
-                break
+        # end_match = end_pattern.search(line)
+        # if end_match:
+        #     end_counter += 1
+        #     if end_counter > 1:
+        #         break
 
     return enemy["counter"]
 
@@ -117,7 +117,7 @@ def parse_log_file2(enemy_positions, log_file, output_file, state_file):
         lines = file.readlines()
 
     # **跳过前 5135 行**
-    lines = lines[5135:]
+    # lines = lines[5135:]
 
     success = None  # 记录当前回合的状态
     reward = None  # 记录当前回合的奖励
@@ -288,10 +288,12 @@ def generate_enemy_positions():
 if __name__ == "__main__":
     enemy_positions = generate_enemy_positions()
 
+    enemy_positions = enemy_positions[42601:]
+
     # 先读文件
-    counter = parse_log_file2(enemy_positions, "./render-result/run.log",
-                             "./test_result/dodge_test/parsed_results2.json",
-                             "./test_result/dodge_test/parsed_states2.json")
+    counter = parse_log_file(enemy_positions, "./render-result/run3.log",
+                             "./test_result/dodge_test/parsed_results3_total.json",
+                             "./test_result/dodge_test/parsed_states3_total.json")
 
     # filter_json("./test_result/dodge_test/parsed_results.json", "./test_result/dodge_test/parsed_results1.json", 17949)
     # filter_json("./test_result/dodge_test/parsed_states.json", "./test_result/dodge_test/parsed_states1.json", 17741)

@@ -2,6 +2,14 @@ import torch
 import numpy as np
 from gymnasium import spaces
 from typing import Literal
+import sys
+import parser
+
+from stable_baselines3.common.vec_env.util import obs_space_info
+
+from LAGmaster.algorithms.ppo.ppo_policy import PPOPolicy as Policy
+from LAGmaster.config import get_config
+
 from .task_base import BaseTask
 from ..core.simulatior import AircraftSimulator
 from ..core.catalog import Catalog as c
@@ -195,6 +203,8 @@ class SingleCombatTask(BaseTask):
             return ManeuverAgent(maneuver='n')
         elif name == 'dodge':
             return DodgeMissileAgent()
+        elif name == 'dodge_self':
+            return DodgeMissileAgent_self()
         elif name == 'straight':
             return StraightFlyAgent()
         else:
@@ -397,6 +407,7 @@ class ManeuverAgent(BaselineAgent):
 
 class DodgeMissileAgent:
     def __init__(self) -> None:
+        # self.model_path = get_root_dir() + '/model/dodge_missile_latest.pt'
         self.model_path = get_root_dir() + '/model/dodge_missile_model.pt'
         self.actor = BaselineActor(input_dim=21, use_mlp_actlayer=True)
         self.actor.load_state_dict(torch.load(self.model_path, map_location=torch.device('cpu'), weights_only=True))
@@ -445,10 +456,153 @@ class DodgeMissileAgent:
         norm_obs[13] = R / 10000
         norm_obs[14] = side_flag
         # (3) relative missile info
-        if len(sim.under_missiles) != 0 and sim.under_missiles[0].is_alive:
-            missile_sim = sim.under_missiles[0]
-        else:
-            missile_sim = None
+        # if len(sim.under_missiles) != 0 and sim.under_missiles[0].is_alive:
+        # 这个是不是不对啊，第一颗失败了，第二颗咋办？
+        missile_sim = sim.check_missile_warning()
+        # if len(sim.under_missiles) != 0 and sim.under_missiles[0].is_alive:
+        #     missile_sim = sim.under_missiles[0]
+        # else:
+        #     missile_sim = None
+        if missile_sim is not None:
+            missile_feature = np.concatenate((missile_sim.get_position(), missile_sim.get_velocity()))
+            ego_AO, ego_TA, R, side_flag = get2d_AO_TA_R(ego_feature, missile_feature, return_side=True)
+            norm_obs[15] = (np.linalg.norm(missile_sim.get_velocity()) - ego_obs_list[9]) / 340
+            norm_obs[16] = (missile_feature[2] - ego_obs_list[2]) / 1000
+            norm_obs[17] = ego_AO
+            norm_obs[18] = ego_TA
+            norm_obs[19] = R / 10000
+            norm_obs[20] = side_flag
+        norm_obs = np.expand_dims(norm_obs, axis=0)
+        return norm_obs
+
+    def normalize_action(self, action):
+        norm_act = np.zeros(4)
+        norm_act[0] = action[0] / 20 - 1.   # 0~40 => -1~1
+        norm_act[1] = action[1] / 20 - 1.   # 0~40 => -1~1
+        norm_act[2] = action[2] / 20 - 1.   # 0~40 => -1~1
+        norm_act[3] = action[3] / 58 + 0.4  # 0~29 => 0.4~0.9
+        return norm_act
+
+    def get_action(self, sim: AircraftSimulator):
+        obs = self.get_observation(sim)
+        _action, self.rnn_states = self.actor(obs, self.rnn_states)
+        action = _action.squeeze().detach().cpu().numpy().squeeze()
+        return self.normalize_action(action)
+
+    def reset(self):
+        self.rnn_states = np.zeros((1, 1, 128))
+
+
+def set_default_params(parser):
+    """通过代码方式设置参数默认值"""
+    parser.set_defaults(
+        env_name="SingleCombat",
+        algorithm_name="ppo",
+        scenario_name="1v1/DodgeMissile/HierarchyVsBaseline",
+        experiment_name="1v1",
+        seed=1,
+        n_training_threads=1,
+        n_rollout_threads=2,
+        cuda=True,  # `store_true` 类型的参数，设为 True 表示开启
+        log_interval=1,
+        save_interval=1,
+        n_choose_opponents=1,
+        use_eval=True,
+        n_eval_rollout_threads=1,
+        eval_interval=1,
+        eval_episodes=1,
+        num_mini_batch=5,
+        buffer_size=200,
+        num_env_steps=1e8,
+        lr=3e-4,
+        gamma=0.99,
+        ppo_epoch=4,
+        clip_params=0.2,
+        max_grad_norm=2,
+        entropy_coef=1e-3,
+        hidden_size="128 128",  # ✅ 改成字符串
+        act_hidden_size="128 128",  # ✅ 改成字符串
+        recurrent_hidden_size=128,
+        recurrent_hidden_layers=1,
+        data_chunk_length=8
+    )
+
+    return parser
+
+
+
+class DodgeMissileAgent_self(BaselineAgent):
+    def __init__(self) -> None:
+        super().__init__()
+        self.model_path = get_root_dir() + '/model/dodge_missile_model.pt'
+        self.actor = BaselineActor(input_dim=21, use_mlp_actlayer=True)
+        self.actor.load_state_dict(torch.load(self.model_path, map_location=torch.device('cpu'), weights_only=True))
+
+        self.model_path_self = 'LAGmaster/scripts/results/SingleCombat/1v1/DodgeMissile/HierarchyVsBaseline/ppo/1v1/run42/actor_latest.pt'
+
+        parser = get_config()
+        parser = set_default_params(parser)
+        all_args = parser.parse_args([])
+        obs_space = spaces.Box(low=-10, high=10., shape=(21,))
+        act_space = spaces.MultiDiscrete([3, 5, 3])
+        device = torch.device("cuda:0")
+        self.actor_self = Policy(all_args, obs_space, act_space, device=device)
+
+        self.actor_self.actor.load_state_dict(torch.load(self.model_path_self, weights_only=True))
+        self.actor_self.prep_rollout()
+
+        self.state_var = [
+            c.position_long_gc_deg,             # 0. lontitude  (unit: °)
+            c.position_lat_geod_deg,            # 1. latitude   (unit: °)
+            c.position_h_sl_m,                  # 2. altitude   (unit: m)
+            c.attitude_roll_rad,                # 3. roll       (unit: rad)
+            c.attitude_pitch_rad,               # 4. pitch      (unit: rad)
+            c.attitude_heading_true_rad,        # 5. yaw        (unit: rad)
+            c.velocities_v_north_mps,           # 6. v_north    (unit: m/s)
+            c.velocities_v_east_mps,            # 7. v_east     (unit: m/s)
+            c.velocities_v_down_mps,            # 8. v_down     (unit: m/s)
+            c.velocities_u_mps,                 # 9. v_body_x   (unit: m/s)
+            c.velocities_v_mps,                 # 10. v_body_y  (unit: m/s)
+            c.velocities_w_mps,                 # 11. v_body_z  (unit: m/s)
+            c.velocities_vc_mps,                # 12. vc        (unit: m/s)
+        ]
+        self.reset()
+
+    def get_observation(self, sim: AircraftSimulator):
+        norm_obs = np.zeros(21)
+        ego_obs_list = np.array(sim.get_property_values(self.state_var))
+        enm_obs_list = np.array(sim.enemies[0].get_property_values(self.state_var))
+        # (0) extract feature: [north(km), east(km), down(km), v_n(mh), v_e(mh), v_d(mh)]
+        ego_cur_ned = LLA2NEU(*ego_obs_list[:3], 120.0, 60.0, 0.0)
+        enm_cur_ned = LLA2NEU(*enm_obs_list[:3], 120.0, 60.0, 0.0)
+        ego_feature = np.array([*ego_cur_ned, *(ego_obs_list[6:9])])
+        enm_feature = np.array([*enm_cur_ned, *(enm_obs_list[6:9])])
+        # (1) ego info normalization
+        norm_obs[0] = ego_obs_list[2] / 5000            # 0. ego altitude   (unit: 5km)
+        norm_obs[1] = np.sin(ego_obs_list[3])           # 1. ego_roll_sin
+        norm_obs[2] = np.cos(ego_obs_list[3])           # 2. ego_roll_cos
+        norm_obs[3] = np.sin(ego_obs_list[4])           # 3. ego_pitch_sin
+        norm_obs[4] = np.cos(ego_obs_list[4])           # 4. ego_pitch_cos
+        norm_obs[5] = ego_obs_list[9] / 340             # 5. ego v_body_x   (unit: mh)
+        norm_obs[6] = ego_obs_list[10] / 340            # 6. ego v_body_y   (unit: mh)
+        norm_obs[7] = ego_obs_list[11] / 340            # 7. ego v_body_z   (unit: mh)
+        norm_obs[8] = ego_obs_list[12] / 340            # 8. ego vc   (unit: mh)
+        # (2) relative info w.r.t enm state
+        ego_AO, ego_TA, R, side_flag = get2d_AO_TA_R(ego_feature, enm_feature, return_side=True)
+        norm_obs[9] = (enm_obs_list[9] - ego_obs_list[9]) / 340
+        norm_obs[10] = (enm_obs_list[2] - ego_obs_list[2]) / 1000
+        norm_obs[11] = ego_AO
+        norm_obs[12] = ego_TA
+        norm_obs[13] = R / 10000
+        norm_obs[14] = side_flag
+        # (3) relative missile info
+        # if len(sim.under_missiles) != 0 and sim.under_missiles[0].is_alive:
+        # 这个是不是不对啊，第一颗失败了，第二颗咋办？
+        missile_sim = sim.check_missile_warning()
+        # if len(sim.under_missiles) != 0 and sim.under_missiles[0].is_alive:
+        #     missile_sim = sim.under_missiles[0]
+        # else:
+        #     missile_sim = None
         if missile_sim is not None:
             missile_feature = np.concatenate((missile_sim.get_position(), missile_sim.get_velocity()))
             ego_AO, ego_TA, R, side_flag = get2d_AO_TA_R(ego_feature, missile_feature, return_side=True)
@@ -465,7 +619,13 @@ class DodgeMissileAgent:
         obs = self.get_observation(sim)
         _action, self.rnn_states = self.actor(obs, self.rnn_states)
         action = _action.squeeze().detach().cpu().numpy().squeeze()
+
+        _action, self.rnn_states = self.actor(obs, self.rnn_states_self, self.masks_self)
+        action = _action.squeeze().detach().cpu().numpy().squeeze()
+
         return action
 
     def reset(self):
         self.rnn_states = np.zeros((1, 1, 128))
+        self.rnn_states_self = np.zeros((1, 1, 128))
+        self.masks_self = np.ones((1, 1))

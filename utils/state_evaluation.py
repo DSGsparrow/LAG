@@ -117,5 +117,5 @@ def evaluate_situation(result_file, output_file, w_hit=1.0, w_posture=0.8, w_alt
 
 # 运行示例
 a = np.arctanh(1.-1e-4)
-evaluate_situation("./test_result/dodge_test/parsed_results1.json", "./test_result/dodge_test/evaluated_result1.json")
-evaluate_situation("./test_result/dodge_test/parsed_results2.json", "./test_result/dodge_test/evaluated_result2.json")
+evaluate_situation("./test_result/dodge_test/parsed_results_all.json", "./test_result/dodge_test/evaluated_results_all.json")
+# evaluate_situation("./test_result/dodge_test/parsed_results2.json", "./test_result/dodge_test/evaluated_result2.json")

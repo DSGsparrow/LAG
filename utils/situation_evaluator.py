@@ -109,7 +109,7 @@ def predict_situation(input_data, model_path="situation_model.pth", scaler_path=
 # **主程序：训练模型**
 if __name__ == "__main__":
     # **加载数据**
-    X, y = load_data("./test_result/dodge_test/merged_evaluation.json")
+    X, y = load_data("./test_result/dodge_test/evaluated_results_all.json")
 
     # **数据归一化**
     scaler = StandardScaler()

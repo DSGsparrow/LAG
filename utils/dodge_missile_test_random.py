@@ -214,9 +214,10 @@ def simulate_missile(ego_policy, env, buffer, output_states_file):
     # render_episode_rewards = 0
     # env.envs[0].set_enemy(enemy)
     # env.set_attr("set_enemy", enemy)
-    render_obs = env.envs[0]._pack(env.envs[0].get_obs()).reshape(1, 1, -1)
+    # render_obs = env.envs[0]._pack(env.envs[0].get_obs()).reshape(1, 1, -1)
     render_masks = np.ones((1, *buffer.masks.shape[2:]), dtype=np.float32)
     render_rnn_states = np.zeros((1, *buffer.rnn_states_actor.shape[2:]), dtype=np.float32)
+    # a = np.concatenate(render_rnn_states)
     save_acmi_path = get_unique_filename('dm', 'l', 'p')
     env.render(mode='txt', filepath=save_acmi_path)
 

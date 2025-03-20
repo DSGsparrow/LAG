@@ -264,8 +264,14 @@ class HierarchicalSingleCombatShootTask(HierarchicalSingleCombatTask, SingleComb
     def normalize_action(self, env, agent_id, action):
         """Convert high-level action into low-level action.
         """
-        self._shoot_action[agent_id] = action[-1]
-        return HierarchicalSingleCombatTask.normalize_action(self, env, agent_id, action[:-1].astype(np.int32))
+
+        if self.use_baseline and agent_id in env.enm_ids:
+            action = self.baseline_agent.get_action(env.agents[agent_id])
+            return action
+
+        else:
+            self._shoot_action[agent_id] = action[-1]
+            return HierarchicalSingleCombatTask.normalize_action(self, env, agent_id, action[:-1].astype(np.int32))
 
     def reset(self, env):
         self._inner_rnn_states = {agent_id: np.zeros((1, 1, 128)) for agent_id in env.agents.keys()}

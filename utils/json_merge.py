@@ -23,10 +23,10 @@ def merge_multiple_json_files(file_list, output_file):
     print(f"合并完成，已保存至 {output_file}")
 
 # **使用示例**
-file1 = "./test_result/dodge_test/evaluated_result1.json"
-file2 = "./test_result/dodge_test/evaluated_result2.json"
-file3 = "./test_result/dodge_test/evaluated_result3.json"
+file1 = "./test_result/dodge_test/parsed_results1.json"
+file2 = "./test_result/dodge_test/parsed_results2.json"
+file3 = "./test_result/dodge_test/parsed_results3_total.json"
 
-file_list = [file1, file2]  # 你的 JSON 文件列表
-output_json = "./test_result/dodge_test/merged_evaluation.json"  # 目标合并文件
+file_list = [file1, file2, file3]  # 你的 JSON 文件列表
+output_json = "./test_result/dodge_test/parsed_results_all.json"  # 目标合并文件
 merge_multiple_json_files(file_list, output_json)
