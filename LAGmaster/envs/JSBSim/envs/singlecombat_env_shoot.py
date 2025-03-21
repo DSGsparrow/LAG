@@ -104,7 +104,7 @@ class SingleCombatEnvShoot(BaseEnv):
         self.env_id = env_id
         # self.enemy_positions = copy.deepcopy(enemy_positions)
         self.cumulative_reward = 0
-        self.render_path = getattr(self.config, 'render_path', "render_train/shoot")
+        self.render_path = getattr(self.config, 'render_path', "render_train/shoot2")
         self.render_file = get_unique_filename(env_id, 'baseline_dodge', self.render_path)
 
     def load_task(self):

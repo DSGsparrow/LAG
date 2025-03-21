@@ -4,7 +4,7 @@
 
 ************************************************************************
 
-JSBSim aerodynamic model for a Sopwith Camel 1F1 
+JSBSim aerodynamic model for a Sopwith Camel 1F1
 
 Version: 1.6
 
@@ -1656,7 +1656,7 @@ We're modeling the 130 HP Clerget here, so 30 imp. gal in one tank and 7 in the 
                         </tableData>
                     </table>
                     
-                    <!-- The idea of the following table is to model the force feedback or the 
+                    <!-- The idea of the following table is to model the force feedback or the
                     idea that as you pull higher & higher Gs you really can't just keep yanking on 
                     the controls as hard. They are pulling back harder and harder with back-force 
                     or maybe you are just feeling the G forces physically with your body that 

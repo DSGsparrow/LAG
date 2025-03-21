@@ -224,9 +224,9 @@ def setup_logging(log_file = None):
 
 # ========== 6. 训练 PPO ==========
 if __name__ == "__main__":
-    num_envs = 16  # 设定 8 个并行环境（根据 GPU 性能调整）
+    num_envs = 2  # 设定 8 个并行环境（根据 GPU 性能调整）
 
-    log_file = "./train/result/train_shoot.log"
+    log_file = "./train/result/train_shoot2.log"
 
     # setup_logging(log_file)
     # 创建并行环境
@@ -243,6 +243,27 @@ if __name__ == "__main__":
         features_extractor_kwargs=dict(action_dim=env.action_space)
     )
 
+    # 模型路径
+    model_path = "./ppo_air_combat.zip"
+
+    if os.path.exists(model_path):
+        print("✅ 加载已有模型继续训练...")
+        model = PPO.load(
+            model_path,
+            env=env,
+            tensorboard_log="./ppo_air_combat_tb/",
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        )
+    else:
+        print("🆕 没有旧模型，重新训练一个新的 PPO 模型")
+        model = PPO(
+            "MlpPolicy", env, policy_kwargs=policy_kwargs,
+            learning_rate=3e-4, n_steps=2048, batch_size=64, n_epochs=10,
+            gamma=0.99, gae_lambda=0.95, clip_range=0.2, ent_coef=0.01,
+            verbose=1, tensorboard_log="./ppo_air_combat_tb/",
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        )
+
     model = PPO("MlpPolicy", env, policy_kwargs=policy_kwargs,
                 learning_rate=3e-4,  # 默认 PPO 学习率
                 n_steps=2048,  # 训练步数（较大值提高样本利用率）
@@ -257,7 +278,7 @@ if __name__ == "__main__":
                 device="cuda" if torch.cuda.is_available() else "cpu")  # 使用 GPU 加速
 
     # 训练模型
-    model.learn(total_timesteps=1_000_000)  # 训练 100 万步
+    model.learn(total_timesteps=1_000_000, tb_log_name="test")  # 训练 100 万步
 
     # 保存训练好的 PPO 模型
     model.save("ppo_air_combat")
