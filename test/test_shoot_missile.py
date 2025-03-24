@@ -2,7 +2,7 @@ from stable_baselines3 import PPO
 import gym
 import torch
 import numpy as np
-from env.env_shoot_missile import SB3SingleCombatEnv
+from adapter.adapter_shoot_missile import SB3SingleCombatEnv
 
 
 def run_model_test(model_path, env_config, num_episodes=10, render=False):
@@ -22,7 +22,8 @@ def run_model_test(model_path, env_config, num_episodes=10, render=False):
     env = SB3SingleCombatEnv(env_id=0, config_name=env_config)
 
     # 加载模型（注意要设置 env）
-    model = PPO.load(model_path, env=env, device="cuda" if torch.cuda.is_available() else "cpu")
+    # model = PPO.load(model_path, env=env, device="cuda" if torch.cuda.is_available() else "cpu")
+    model = PPO.load(model_path, device="cuda" if torch.cuda.is_available() else "cpu")
 
     episode_rewards = []
 
@@ -52,7 +53,7 @@ def run_model_test(model_path, env_config, num_episodes=10, render=False):
 
 if __name__ == "__main__":
     avg = run_model_test(
-        model_path="model/shoot_missile/ppo_air_combat.zip",
+        model_path="trained_model/shoot_missile/ppo_air_combat.zip",
         env_config='1v1/ShootMissile/HierarchyVsBaseline_self',
         num_episodes=5,
         render=False  # 如果你的环境支持图形渲染，可以设为 True

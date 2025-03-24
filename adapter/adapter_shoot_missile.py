@@ -32,7 +32,10 @@ class SB3SingleCombatEnv(gymnasium.Env):
             # 转换为 MultiDiscrete
             self.action_space = spaces.MultiDiscrete(action_dims)
         else:
-            raise ValueError("Unexpected action space type: {}".format(type(self.env.action_space)))
+            if isinstance(self.env.action_space, spaces.MultiDiscrete):
+                self.action_space = self.env.action_space
+            else:
+                raise ValueError("Unexpected action space type: {}".format(type(self.env.action_space)))
 
         self.observation_space = self.env.observation_space
 

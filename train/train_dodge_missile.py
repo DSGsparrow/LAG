@@ -3,120 +3,22 @@ import gymnasium
 import torch
 import torch.nn as nn
 import numpy as np
+
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from gym import spaces
+from stable_baselines3.common.callbacks import CheckpointCallback
+
+from gymnasium import spaces
 import argparse
 import os
 import logging
 
+from net.net_shoot_missile import MLPBase, GRULayer, ACTLayer, CustomPolicy
+from adapter.adapter_shoot_missile import SB3SingleCombatEnv
+
 from LAGmaster.envs.JSBSim.envs import SingleCombatEnv, SingleControlEnv, SingleCombatEnvTest
-
-# ========== 1. 适配 SB3 的自定义环境 ==========
-class SB3SingleCombatEnv(gymnasium.Env):
-    """将 SingleCombatEnvTest 适配为 SB3 兼容的 Gym 环境"""
-
-    def __init__(self, config_name):
-        super(SB3SingleCombatEnv, self).__init__()
-        self.env = SingleCombatEnvTest(config_name)  # 你的原始环境
-        # obs_shape = self.env.get_obs().shape[0]  # 获取观测空间维度
-        # act_shape = self.env.get_action_space().shape[0]  # 获取动作空间维度
-        # 继承原始环境的动作空间和观察空间
-        self.action_space = self.env.action_space
-        self.observation_space = self.env.observation_space
-
-        # # 定义 Gym 兼容的观测和动作空间
-        # self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float32)
-        # self.action_space = spaces.Box(low=-1, high=1, shape=(act_shape,), dtype=np.float32)
-
-    def step(self, action):
-        # 将长度为 4 的动作转换为长度为 (1,4) 的动作
-        actual_action = action.reshape(-1, 3)  # 取第一个值
-
-        obs, rewards, dones, info = self.env.step(actual_action)
-        observation, reward, terminated, truncated, info = obs, rewards, dones, dones, info
-
-        return observation, reward, terminated, truncated, info
-
-    def reset(self, seed=None, options=None):
-        """重置环境，支持 `seed` 以适配 SB3"""
-        super().reset(seed=seed)  # 让 Gym 兼容 SB3 的 `seed`
-        return self.env.reset(), None
-
-    def close(self):
-        return self.env.close()
-
-    def render(self, mode="txt", filepath='./JSBSimRecording.txt.acmi', tacview=None):
-        self.env.render(mode=mode, filepath=filepath, tacview=tacview)
-
-
-# ========== 2. MLPBase（特征提取） ==========
-class MLPBase(nn.Module):
-    def __init__(self, input_dim, hidden_dim):
-        super(MLPBase, self).__init__()
-        self.network = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.LayerNorm(hidden_dim),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.LayerNorm(hidden_dim),
-        )
-        self.output_dim = hidden_dim
-
-    def forward(self, x):
-        return self.network(x)
-
-
-# ========== 3. GRULayer（时间序列建模） ==========
-class GRULayer(nn.Module):
-    def __init__(self, input_dim, hidden_dim):
-        super(GRULayer, self).__init__()
-        self.gru = nn.GRU(input_dim, hidden_dim, batch_first=True)
-        self.output_dim = hidden_dim
-
-    def forward(self, x):
-        if x.dim() == 2:  # (batch, features)
-            x = x.unsqueeze(1)  # 变成 (batch, 1, features)，保证 GRU 兼容
-        elif x.dim() == 4:  # (batch, 1, seq_len, features)
-            x = x.squeeze(1)  # 去掉多余的 batch 维度
-        x, _ = self.gru(x)  # GRU 处理
-        return x.squeeze(1)  # (batch, features)
-
-
-# ========== 4. ACTLayer（动作决策层） ==========
-class ACTLayer(nn.Module):
-    def __init__(self, input_dim, action_dim):
-        super(ACTLayer, self).__init__()
-        self.mu_layer = nn.Linear(input_dim, action_dim)
-        self.sigma_layer = nn.Linear(input_dim, action_dim)
-
-    def forward(self, x, deterministic=False):
-        mu = self.mu_layer(x)
-        sigma = torch.clamp(self.sigma_layer(x), -5, 2)  # 限制范围
-        std = torch.exp(sigma)  # 转换为标准差
-        dist = torch.distributions.Normal(mu, std)
-        action = mu if deterministic else dist.sample()
-        return action, dist.log_prob(action)
-
-
-# ========== 5. 自定义策略网络（Feature + GRU + Action） ==========
-class CustomPolicy(BaseFeaturesExtractor):
-    def __init__(self, observation_space: spaces.Box, action_dim):
-        super(CustomPolicy, self).__init__(observation_space, features_dim=128)
-
-        input_dim = observation_space.shape[0]
-        hidden_dim = 128  # 隐藏层大小
-        self.feature_extractor = MLPBase(input_dim, hidden_dim)
-        self.gru_layer = GRULayer(hidden_dim, hidden_dim)  # GRU 处理时间序列
-        self.act_layer = ACTLayer(hidden_dim, action_dim)
-
-    def forward(self, x):
-        features = self.feature_extractor(x)
-        features = self.gru_layer(features)
-        return features  # 只返回 Tensor，不要返回 Tuple
 
 
 def get_config():
@@ -166,12 +68,8 @@ def get_config():
     return parser
 
 
-def setup_logging(run_dir, log_file = None):
+def setup_logging(log_file = None):
     """配置 logging，让日志既输出到终端，又写入 run.log 文件"""
-    if not log_file:
-        os.makedirs(run_dir, exist_ok=True)  # 确保日志目录存在
-        log_file = os.path.join(run_dir, "run.log")  # 日志文件路径
-
     # 获取全局 logger
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)  # 设定最低日志级别
@@ -188,7 +86,7 @@ def setup_logging(run_dir, log_file = None):
     file_handler.setLevel(logging.INFO)
 
     # 日志格式
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s [PID %(process)d]- %(message)s")
     console_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
 
@@ -201,42 +99,80 @@ def setup_logging(run_dir, log_file = None):
 
 # ========== 6. 训练 PPO ==========
 if __name__ == "__main__":
-    num_envs = 3  # 设定 8 个并行环境（根据 GPU 性能调整）
+    num_envs = 16  # 设定 8 个并行环境（根据 GPU 性能调整）
 
-    log_file = "train/result/train_dodge.log"
-
-    setup_logging('./render-result', log_file)
+    log_file = "./train/result/train_dodge.log"
 
     # 创建并行环境
-    def make_env():
-        return SB3SingleCombatEnv(config_name='1v1/DodgeMissile/HierarchyVsBaseline')
+    def make_env(env_id):
+        setup_logging(log_file)
+        return SB3SingleCombatEnv(env_id, config_name='1v1/DodgeMissile/HierarchyVsBaselineSelf')
 
-    env = SubprocVecEnv([lambda: make_env() for _ in range(num_envs)])
+
+    # env = SubprocVecEnv([lambda: make_env(env_id) for env_id in range(num_envs)])
+    env = SubprocVecEnv([lambda env_id=env_id: make_env(env_id) for env_id in range(num_envs)])
 
     # 定义 PPO 模型（自定义 MLP 作为特征提取器）
     policy_kwargs = dict(
         features_extractor_class=CustomPolicy,
-        features_extractor_kwargs=dict(action_dim=env.action_space.shape[0])
+        features_extractor_kwargs=dict(action_dim=env.action_space)
     )
 
-    model = PPO("MlpPolicy", env, policy_kwargs=policy_kwargs,
-                learning_rate=3e-4,  # 默认 PPO 学习率
-                n_steps=2048,  # 训练步数（较大值提高样本利用率）
-                batch_size=64,  # 每次更新的批量大小
-                n_epochs=10,  # 每个 batch 训练 10 次
-                gamma=0.99,  # 折扣因子
-                gae_lambda=0.95,  # GAE
-                clip_range=0.2,  # PPO 剪辑范围
-                ent_coef=0.01,  # 策略熵正则化
-                verbose=1,  # 显示训练进度
-                tensorboard_log="./ppo_air_combat_tb/",  # 记录 TensorBoard 日志
-                device="cuda" if torch.cuda.is_available() else "cpu")  # 使用 GPU 加速
+    # 模型路径
+    model_path = "./trained_model/dodge_missile/ppo_air_combat_dodge.zip"
 
-    # 训练模型
-    model.learn(total_timesteps=1_000_000)  # 训练 100 万步
+    if os.path.exists(model_path):
+        print("✅ 加载已有模型继续训练...")
+        model = PPO.load(
+            model_path,
+            env=env,
+            tensorboard_log="./ppo_air_combat_tb/",
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        )
+    else:
+        print("🆕 没有旧模型，重新训练一个新的 PPO 模型")
+        model = PPO(
+            "MlpPolicy", env, policy_kwargs=policy_kwargs,
+            learning_rate=3e-4, n_steps=2048, batch_size=64, n_epochs=10,
+            gamma=0.99, gae_lambda=0.95, clip_range=0.2, ent_coef=0.01,
+            verbose=1, tensorboard_log="./ppo_air_combat_tb/",
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        )
 
-    # 保存训练好的 PPO 模型
-    model.save("ppo_air_combat")
+    # 创建 checkpoint 回调，每 10 万步保存一次
+    checkpoint_callback = CheckpointCallback(
+        save_freq=100_000,  # 每 10 万步保存一次
+        save_path="./trained_model/dodge_missile_checkpoints/",  # 保存文件夹
+        name_prefix="ppo_air_combat_dodge"  # 文件名前缀
+    )
+
+    # 创建 PPO 模型
+    model = PPO(
+        "MlpPolicy",
+        env,
+        policy_kwargs=policy_kwargs,
+        learning_rate=3e-4,
+        n_steps=2048,
+        batch_size=64,
+        n_epochs=10,
+        gamma=0.99,
+        gae_lambda=0.95,
+        clip_range=0.2,
+        ent_coef=0.01,
+        verbose=1,
+        tensorboard_log="./ppo_air_combat_tb/",
+        device="cuda" if torch.cuda.is_available() else "cpu"
+    )
+
+    # 开始训练，同时记录 TensorBoard 和保存中间模型
+    model.learn(
+        total_timesteps=3_000_000,
+        tb_log_name="test",
+        callback=checkpoint_callback
+    )
+
+    # 最终训练完成后保存一次完整模型
+    model.save("./trained_model/dodge_missile/ppo_air_combat_dodge")
 
     # 关闭环境
     env.close()

@@ -43,8 +43,11 @@ class DodgeMissileSafeReturn(BaseTerminationCondition):
             return True, True, info
 
         # not crushed or shot down and not under attack
+        # and enemy's missiles has all been shot
+        # 敌方弹都打出来了并且都失效了，此时还没有被打死
         elif all([not missile.is_alive for missile in env.agents[agent_id].under_missiles]) \
-            and agent_id == 'A0100':
+                and agent_id == 'A0100' \
+                and all([enemy.num_left_missiles == 0 for enemy in env.agents[agent_id].enemies]):
             # and not is_shotdown and not is_crash and doesn't care enemy
             self.log(f'{agent_id} dodge succeeded! Total Steps={env.current_step}')
             info['dodge success'] = True

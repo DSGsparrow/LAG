@@ -94,7 +94,7 @@ def make_train_env(all_args, enemy_positions):
     def get_env_fn(rank):
         def init_env():
             if all_args.env_name == "SingleCombat":
-                env = SingleCombatEnvTest(all_args.scenario_name, enemy_positions)
+                env = SingleCombatEnvTest(all_args.scenario_name)
             elif all_args.env_name == "SingleControl":
                 env = SingleControlEnv(all_args.scenario_name)
             elif all_args.env_name == "MultipleCombat":

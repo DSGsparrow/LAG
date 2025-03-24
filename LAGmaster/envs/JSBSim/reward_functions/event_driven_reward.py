@@ -31,4 +31,11 @@ class EventDrivenReward(BaseRewardFunction):
         for missile in env.agents[agent_id].launch_missiles:
             if missile.is_success:
                 reward += 200
+
+        if all([not missile.is_alive for missile in env.agents[agent_id].under_missiles]) \
+                and agent_id == 'A0100' \
+                and all([enemy.num_left_missiles == 0 for enemy in env.agents[agent_id].enemies]):
+            # dodge success
+            reward += 100
+
         return self._process(reward, agent_id)
