@@ -1,3 +1,72 @@
+# train: shoot missile 4
+加入use-prior  
+实在是没办法了  
+希望这个会有更好的表现  
+其实也有缺陷，很容易出现打弹重叠，不过这个应该目前不用担心
+
+
+
+
+# train:shoot missile 3
+## 智能体
+敌方dodge1 自己shoot2
+
+## 奖励
++ 打弹scale放大为10
++ 姿态
+  + 优势>对抗>找不到>劣势
+  + 与双方都有关
++ 距离，远距离奖励急速下降，让飞机尽可能接近
++ scale下调 10
++ 最终打弹失败给-200
+
+失败了，攻击学不到控制距离
+
+
+
+
+# train: shoot missile 2
+## 智能体
+使用训练出来的躲避智能体
+
+## 奖励
++ 打弹 shoot_penalty_reward.py
+  + scale = 3
+  + -20的防乱打
+  + -10 的超过10000
+  + 距离 * 10
+    + ![距离奖励图](shoot_distance_reward.png)
+    + center 7000 sigma 3000
+    + 写在config里
+  + 角度
+    + 自己的
+      + 超过50 -10
+      + 50以内 函数 * 10
+      + center 0 sigma 30
+    + 敌方
+      + 超过150 对着自己 +5
+  + 高度
+    + 0-2 给 0-1 * 5
++ 姿态：
+  + 改成V3 自己写的函数
+  * 分成均势，优势，劣势
+  * 敌我机有没有进30度
+  * 均势0-0.8，
+  * 优势1-1.5
+  * 劣势-1-0
++ 高度
+  + relative_altitude_reward.py
+  + 0-2 给 0-1
+  + 直接不用他的v了
+
+
+
+
+
+
+
+
+
 # train: shoot missile
 train_shoot_missile.py
 

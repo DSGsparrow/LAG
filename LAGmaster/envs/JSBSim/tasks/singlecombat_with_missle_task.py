@@ -5,7 +5,7 @@ import logging
 
 from .singlecombat_task import SingleCombatTask, HierarchicalSingleCombatTask
 from ..reward_functions import AltitudeReward, PostureReward, MissilePostureReward, EventDrivenReward
-from ..reward_functions import ShootPenaltyReward, ShootGapPenaltyReward
+from ..reward_functions import ShootPenaltyReward, ShootGapPenaltyReward, RelativeAltitudeReward, ShootEventDrivenReward
 from ..termination_conditions import ExtremeState, LowAltitude, Overload, Timeout, DodgeMissileSafeReturn
 from ..termination_conditions import SafeReturn, ShootSafeReturn
 from ..reward_functions import EndAltitudeReward
@@ -295,12 +295,18 @@ class SingleCombatShootMissileTask(SingleCombatDodgeMissileTask):
         for agent_id, agent in env.agents.items():
             # [RL-based missile launch with limited condition]
             shoot_flag = agent.is_alive and self._shoot_action[agent_id] and self.remaining_missiles[agent_id] > 0
+            obs = self.get_obs(env, agent_id)
+            distance = obs[13] * 10000
+            altitude_diff = obs[10] * 1000
+            AO = obs[11] / np.pi * 180
+            TA = obs[12] / np.pi * 180
             if shoot_flag:
                 new_missile_uid = agent_id + str(self.remaining_missiles[agent_id])
                 env.add_temp_simulator(
                     MissileSimulator.create(parent=agent, target=agent.enemies[0], uid=new_missile_uid))
                 self.remaining_missiles[agent_id] -= 1
-                logging.info(f'{agent_id} launch mission! Total Steps={env.current_step}')
+                logging.info(f'{agent_id} launch mission! Total Steps={env.current_step}, distance={distance}, '
+                             f'altitude diff={altitude_diff}, AO={AO}, TA={TA}')
 
 
 class HierarchicalSingleCombatShootTask(HierarchicalSingleCombatTask, SingleCombatShootMissileTask):
@@ -309,9 +315,10 @@ class HierarchicalSingleCombatShootTask(HierarchicalSingleCombatTask, SingleComb
         self.reward_functions = [
             PostureReward(self.config),
             AltitudeReward(self.config),
-            EventDrivenReward(self.config),
+            ShootEventDrivenReward(self.config),
             ShootPenaltyReward(self.config),
             ShootGapPenaltyReward(self.config),
+            RelativeAltitudeReward(self.config),
         ]
 
         self.termination_conditions = [
@@ -365,16 +372,16 @@ class HierarchicalSingleCombatShootTask(HierarchicalSingleCombatTask, SingleComb
             self._shoot_action[agent_id] = action[-1]
 
             # prior
-            obs = self.get_obs(env, agent_id)
-            ego_AO = obs[11] / np.pi * 180
-            ego_TA = obs[12] / np.pi * 180
-            distance = obs[13]
+            # obs = self.get_obs(env, agent_id)
+            # ego_AO = obs[11] / np.pi * 180
+            # ego_TA = obs[12] / np.pi * 180
+            # distance = obs[13]
 
-            if distance > 1:  # 距离超过10公里
-                self._shoot_action[agent_id] = 0
-
-            elif ego_AO > 50.:  # 视线角过大不可以打弹
-                self._shoot_action[agent_id] = 0
+            # if distance > 1:  # 距离超过10公里
+            #     self._shoot_action[agent_id] = 0
+            #
+            # elif ego_AO > 50.:  # 视线角过大不可以打弹
+            #     self._shoot_action[agent_id] = 0
 
             return HierarchicalSingleCombatTask.normalize_action(self, env, agent_id, action[:-1].astype(np.int32))
 

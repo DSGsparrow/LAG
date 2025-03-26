@@ -1,8 +1,34 @@
-from utils.situation_evaluator import predict_situation
+import matplotlib.pyplot as plt
+import numpy as np
 
-data = \
-    {"distance": 8000.0, "angle": 10.285714285714286, "alt": -500.0, "speed": 928.5714285714286, "success": False,
-     "reward": 1293.04889864, "total_steps": 296, "counter": 87, "state": "null", "situation_score": 2.0833820665177685}
+def distance_reward_linear(distance, center=7000, max_distance=10000, sigma=1000):
+    """
+    分段连续距离奖励函数：
+    - <= center: 高斯函数（下降慢）
+    - > center: 线性从 1 降到 -1（直观明确）
+    - > max_distance: 固定为 -1
+    """
+    if distance <= center:
+        # 高斯函数下降慢一点：sigma 调大
+        return np.exp(-((distance - center) ** 2) / (2 * sigma ** 2))
+    elif distance <= max_distance:
+        # 线性递减：从 1 到 -1
+        ratio = (distance - center) / (max_distance - center)  # 0 到 1
+        return 1 - 2 * ratio
+    else:
+        return -1.0
 
-prediction = predict_situation(data)
-print(prediction)
+
+
+xs = np.linspace(5000, 10500, 500)
+ys = [distance_reward_linear(x) for x in xs]
+
+plt.plot(xs, ys)
+plt.axvline(9500, color='gray', linestyle='--', label='center')
+plt.axvline(10000, color='red', linestyle='--', label='max_distance')
+plt.title("Simple Distance-Based Reward (Gaussian + Linear)")
+plt.xlabel("Distance (m)")
+plt.ylabel("Reward")
+plt.legend()
+plt.grid(True)
+plt.show()

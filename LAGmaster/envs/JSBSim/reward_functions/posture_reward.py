@@ -38,14 +38,53 @@ class PostureReward(BaseRewardFunction):
         # feature: (north, east, down, vn, ve, vd)
         ego_feature = np.hstack([env.agents[agent_id].get_position(),
                                  env.agents[agent_id].get_velocity()])
+        x = env.agents[agent_id].enemies[0].get_position()
+        v = env.agents[agent_id].enemies[0].get_velocity()
+        missile_num = task.remaining_missiles[agent_id]
         for enm in env.agents[agent_id].enemies:
             enm_feature = np.hstack([enm.get_position(),
                                     enm.get_velocity()])
             AO, TA, R = get_AO_TA_R(ego_feature, enm_feature)
             orientation_reward = self.orientation_fn(AO, TA)
-            range_reward = self.range_fn(R / 1000)
+            range_reward = self.distance_reward(R / 1000, missile_num)
             new_reward += orientation_reward * range_reward
         return self._process(new_reward, agent_id, (orientation_reward, range_reward))
+
+    def tactical_angle_reward(self, AO, TA):
+        my_angle = AO / np.pi * 180
+        enemy_angle = 180 - TA / np.pi * 180
+
+        # 归一化角度到 [0, 1]，0 表示完全对准，1 表示完全偏离
+        my_norm = np.clip(my_angle / 30.0, 0, 1)
+        enemy_norm = np.clip(enemy_angle / 30.0, 0, 1)
+
+        if my_angle < 30 <= enemy_angle:
+            # ✅ 优势态势
+            # 奖励范围：1.2 ~ 1.5（越准越高，敌人越偏越好）
+            reward = 1.5 - 0.3 * my_norm + 0.1 * enemy_norm
+            return reward
+
+        elif my_angle < 30 and enemy_angle < 30:
+            # ⚖️ 均势态势
+            # 奖励范围：0.8 ~ 1.1
+            reward = 1.1 - 0.3 * my_norm - 0.3 * (1 - enemy_norm)
+            return reward
+
+        elif my_angle >= 30 and enemy_angle >= 30:
+            # 💤 双方都没对准
+            # 奖励范围：0.4 ~ 0.7（轻微鼓励我朝敌人方向转头）
+            reward = 0.4 + 0.3 * (1 - my_norm)
+            return reward
+
+        else:
+            # ❌ 劣势态势（我没看敌人，敌人对着我）
+            # 奖励范围：≤ 0.4
+            # 惩罚敌人越准惩罚越重，鼓励我开始对准
+            penalty = 0.6 * (1 - enemy_norm)
+            bonus = 0.2 * (1 - my_norm)
+            reward = 0.4 - penalty + bonus
+            return reward
+
 
     def get_orientation_function(self, version):
         if version == 'v0':
@@ -57,8 +96,25 @@ class PostureReward(BaseRewardFunction):
         elif version == 'v2':
             return lambda AO, TA: 1 / (50 * AO / np.pi + 2) + 1 / 2 \
                 + min((np.arctanh(1. - max(2 * TA / np.pi, 1e-4))) / (2 * np.pi), 0.) + 0.5
+        elif version == 'v3':
+            return lambda AO, TA: self.tactical_angle_reward(AO, TA)
         else:
             raise NotImplementedError(f"Unknown orientation function version: {version}")
+
+    def distance_reward(self, R, missile_num):
+        # r = distance / 1000
+        r6 = 0.6  # 奖励在6公里处
+        k = 1.5  # 控制远距离惩罚曲线陡度（>1确保梯度递增）
+        a = 0.07  # 远距离惩罚幅度
+        if missile_num > 0:
+            return 1 * (R < 5) + (R >= 5) * np.clip(-0.032 * R**2 + 0.284 * R + 0.38, 0, 1) + np.clip(np.exp(-0.16 * R), 0, 0.2)
+        else:
+            if R < 2:
+                return 1.0
+            elif R <= 6:
+                return ((1.0 - r6) / (6 - 2)) * (6 - R) + r6
+            else:
+                return max(-a * (R - 6) ** k + r6, -1.5)
 
     def get_range_funtion(self, version):
         if version == 'v0':

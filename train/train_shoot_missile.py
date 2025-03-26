@@ -7,6 +7,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from stable_baselines3.common.callbacks import CheckpointCallback
 from gymnasium import spaces
 import argparse
 import os
@@ -194,46 +195,57 @@ def get_config():
     return parser
 
 
-def setup_logging(log_file = None):
-    """配置 logging，让日志既输出到终端，又写入 run.log 文件"""
-    # 获取全局 logger
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)  # 设定最低日志级别
+class EnvIDFilter(logging.Filter):
+    def __init__(self, env_id):
+        super().__init__()
+        self.env_id = env_id
 
-    # 清除已有的 handlers，防止重复添加
+    def filter(self, record):
+        record.env_id = f"{self.env_id}"
+        return True
+
+
+def setup_logging(env_id=0, log_file=None):
+    """配置 logging，让日志既输出到终端，又写入文件，标明 ENV ID"""
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
     logger.handlers.clear()
 
-    # 终端 Handler
+    # 创建 Filter，用于注入 env_id
+    env_filter = EnvIDFilter(env_id)
+
+    # 日志格式带 env_id
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s [ENV %(env_id)s] - %(message)s")
+
+    # 终端 handler
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
-
-    # 文件 Handler
-    file_handler = logging.FileHandler(log_file, mode="a")  # "a" 追加模式
-    file_handler.setLevel(logging.INFO)
-
-    # 日志格式
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s [PID %(process)d]- %(message)s")
     console_handler.setFormatter(formatter)
-    file_handler.setFormatter(formatter)
+    console_handler.addFilter(env_filter)
 
-    # 添加 handlers
+    # 文件 handler
+    file_handler = logging.FileHandler(log_file, mode="a")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    file_handler.addFilter(env_filter)
+
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
 
-    logging.info("init complete, log path: " + log_file)
+    logging.info(f"Logger for ENV {env_id} initialized, log path: {log_file}")
 
 
 # ========== 6. 训练 PPO ==========
 if __name__ == "__main__":
-    num_envs = 2  # 设定 8 个并行环境（根据 GPU 性能调整）
+    num_envs = 16  # 设定 8 个并行环境（根据 GPU 性能调整）
 
-    log_file = "./train/result/train_shoot2.log"
+    log_file = "./train/result/train_shoot3.log"
 
-    # setup_logging(log_file)
     # 创建并行环境
     def make_env(env_id):
-        setup_logging(log_file)
-        return SB3SingleCombatEnv(env_id, config_name='1v1/ShootMissile/HierarchyVsBaseline_self')
+        setup_logging(env_id, log_file)
+        return SB3SingleCombatEnv(env_id, config_name='1v1/ShootMissile/HierarchyVsBaselineSelf')
+
 
     # env = SubprocVecEnv([lambda: make_env(env_id) for env_id in range(num_envs)])
     env = SubprocVecEnv([lambda env_id=env_id: make_env(env_id) for env_id in range(num_envs)])
@@ -245,7 +257,7 @@ if __name__ == "__main__":
     )
 
     # 模型路径
-    model_path = "./ppo_air_combat.zip"
+    model_path = "./trained_model/shoot_missile/ppo_air_combat_2.zip"
 
     if os.path.exists(model_path):
         print("✅ 加载已有模型继续训练...")
@@ -258,31 +270,38 @@ if __name__ == "__main__":
     else:
         print("🆕 没有旧模型，重新训练一个新的 PPO 模型")
         model = PPO(
-            "MlpPolicy", env, policy_kwargs=policy_kwargs,
-            learning_rate=3e-4, n_steps=2048, batch_size=64, n_epochs=10,
-            gamma=0.99, gae_lambda=0.95, clip_range=0.2, ent_coef=0.01,
-            verbose=1, tensorboard_log="./ppo_air_combat_tb/",
+            "MlpPolicy",
+            env,
+            policy_kwargs=policy_kwargs,
+            learning_rate=3e-4,
+            n_steps=2048,
+            batch_size=64,
+            n_epochs=10,
+            gamma=0.99,
+            gae_lambda=0.95,
+            clip_range=0.2,
+            ent_coef=0.02,
+            verbose=1,
+            tensorboard_log="./ppo_air_combat_tb/",
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
 
-    model = PPO("MlpPolicy", env, policy_kwargs=policy_kwargs,
-                learning_rate=3e-4,  # 默认 PPO 学习率
-                n_steps=2048,  # 训练步数（较大值提高样本利用率）
-                batch_size=64,  # 每次更新的批量大小
-                n_epochs=10,  # 每个 batch 训练 10 次
-                gamma=0.99,  # 折扣因子
-                gae_lambda=0.95,  # GAE
-                clip_range=0.2,  # PPO 剪辑范围
-                ent_coef=0.01,  # 策略熵正则化
-                verbose=1,  # 显示训练进度
-                tensorboard_log="./ppo_air_combat_tb/",  # 记录 TensorBoard 日志
-                device="cuda" if torch.cuda.is_available() else "cpu")  # 使用 GPU 加速
+    # 创建 checkpoint 回调，每 10 万步保存一次
+    checkpoint_callback = CheckpointCallback(
+        save_freq=10_000,  # 每 1*num_env 万步保存一次
+        save_path="./trained_model/shoot_missile_checkpoints2/",  # 保存文件夹
+        name_prefix="ppo_air_combat_shoot"  # 文件名前缀
+    )
 
-    # 训练模型
-    model.learn(total_timesteps=1_000_000, tb_log_name="test")  # 训练 100 万步
+    # 开始训练，同时记录 TensorBoard 和保存中间模型
+    model.learn(
+        total_timesteps=3_000_000,
+        tb_log_name="test",
+        callback=checkpoint_callback
+    )
 
-    # 保存训练好的 PPO 模型
-    model.save("ppo_air_combat")
+    # 最终训练完成后保存一次完整模型
+    model.save("./trained_model/shoot_missile/ppo_air_combat_3")
 
     # 关闭环境
     env.close()

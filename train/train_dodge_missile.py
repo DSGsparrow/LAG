@@ -99,7 +99,7 @@ def setup_logging(log_file = None):
 
 # ========== 6. 训练 PPO ==========
 if __name__ == "__main__":
-    num_envs = 16  # 设定 8 个并行环境（根据 GPU 性能调整）
+    num_envs = 1  # 设定 8 个并行环境（根据 GPU 性能调整）
 
     log_file = "./train/result/train_dodge.log"
 
@@ -131,37 +131,29 @@ if __name__ == "__main__":
         )
     else:
         print("🆕 没有旧模型，重新训练一个新的 PPO 模型")
+        # 创建 PPO 模型
         model = PPO(
-            "MlpPolicy", env, policy_kwargs=policy_kwargs,
-            learning_rate=3e-4, n_steps=2048, batch_size=64, n_epochs=10,
-            gamma=0.99, gae_lambda=0.95, clip_range=0.2, ent_coef=0.01,
-            verbose=1, tensorboard_log="./ppo_air_combat_tb/",
+            "MlpPolicy",
+            env,
+            policy_kwargs=policy_kwargs,
+            learning_rate=3e-4,
+            n_steps=2048,
+            batch_size=64,
+            n_epochs=10,
+            gamma=0.99,
+            gae_lambda=0.95,
+            clip_range=0.2,
+            ent_coef=0.02,
+            verbose=1,
+            tensorboard_log="./ppo_air_combat_tb/",
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
 
     # 创建 checkpoint 回调，每 10 万步保存一次
     checkpoint_callback = CheckpointCallback(
-        save_freq=100_000,  # 每 10 万步保存一次
+        save_freq=10_000,  # 每 1*num_env 万步保存一次
         save_path="./trained_model/dodge_missile_checkpoints/",  # 保存文件夹
         name_prefix="ppo_air_combat_dodge"  # 文件名前缀
-    )
-
-    # 创建 PPO 模型
-    model = PPO(
-        "MlpPolicy",
-        env,
-        policy_kwargs=policy_kwargs,
-        learning_rate=3e-4,
-        n_steps=2048,
-        batch_size=64,
-        n_epochs=10,
-        gamma=0.99,
-        gae_lambda=0.95,
-        clip_range=0.2,
-        ent_coef=0.01,
-        verbose=1,
-        tensorboard_log="./ppo_air_combat_tb/",
-        device="cuda" if torch.cuda.is_available() else "cpu"
     )
 
     # 开始训练，同时记录 TensorBoard 和保存中间模型

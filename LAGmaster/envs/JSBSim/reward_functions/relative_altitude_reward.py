@@ -28,5 +28,10 @@ class RelativeAltitudeReward(BaseRewardFunction):
         """
         ego_z = env.agents[agent_id].get_position()[-1] / 1000    # unit: km
         enm_z = env.agents[agent_id].enemies[0].get_position()[-1] / 1000    # unit: km
-        new_reward = min(self.KH - np.abs(ego_z - enm_z), 0)
-        return self._process(new_reward, agent_id)
+        relative_height = ego_z - enm_z
+
+        bonus = np.clip(relative_height, 0, 2) / 2
+        reward = bonus
+
+        # new_reward = min(self.KH - np.abs(ego_z - enm_z - 1), 0)
+        return self._process(reward, agent_id)

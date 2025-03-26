@@ -38750,3 +38750,4 @@ ps=460
 2025-03-24 14:20:27,790 - INFO [PID 27384]- B0100 launch mission! Total Steps=111
 2025-03-24 14:20:28,037 - INFO [PID 5240]- B0100 launch mission! Total Steps=381
 2025-03-24 14:20:28,495 - INFO [PID 17624]- B0100 launch mission! Total Steps=121
+2025-03-24 19:14:53,898 - INFO [PID 22160]- init complete, log path: ./train/result/train_dodge.log
