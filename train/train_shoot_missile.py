@@ -14,6 +14,7 @@ import os
 import logging
 
 from LAGmaster.envs.JSBSim.envs import SingleCombatEnv, SingleControlEnv, SingleCombatEnvShoot
+from net.net_shoot_with_prior import CustomActorCriticPolicy
 
 # ========== 1. 适配 SB3 的自定义环境 ==========
 class SB3SingleCombatEnv(gymnasium.Env):
@@ -81,71 +82,6 @@ class SB3SingleCombatEnv(gymnasium.Env):
 
     def render(self, mode="txt", filepath='./JSBSimRecording.txt.acmi', tacview=None):
         self.env.render(mode=mode, filepath=filepath, tacview=tacview)
-
-
-# ========== 2. MLPBase（特征提取） ==========
-class MLPBase(nn.Module):
-    def __init__(self, input_dim, hidden_dim):
-        super(MLPBase, self).__init__()
-        self.network = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.LayerNorm(hidden_dim),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.LayerNorm(hidden_dim),
-        )
-        self.output_dim = hidden_dim
-
-    def forward(self, x):
-        return self.network(x)
-
-
-# ========== 3. GRULayer（时间序列建模） ==========
-class GRULayer(nn.Module):
-    def __init__(self, input_dim, hidden_dim):
-        super(GRULayer, self).__init__()
-        self.gru = nn.GRU(input_dim, hidden_dim, batch_first=True)
-        self.output_dim = hidden_dim
-
-    def forward(self, x):
-        if x.dim() == 2:  # (batch, features)
-            x = x.unsqueeze(1)  # 变成 (batch, 1, features)，保证 GRU 兼容
-        elif x.dim() == 4:  # (batch, 1, seq_len, features)
-            x = x.squeeze(1)  # 去掉多余的 batch 维度
-        x, _ = self.gru(x)  # GRU 处理
-        return x.squeeze(1)  # (batch, features)
-
-
-# ========== 4. ACTLayer（动作决策层） ==========
-class ACTLayer(nn.Module):
-    def __init__(self, input_dim, action_dim):
-        super(ACTLayer, self).__init__()
-
-        action_dims = list(action_dim.nvec)  # 转换成 Python list 以确保兼容性
-
-        # 创建独立的输出层，每个维度一个 Linear 层
-        self.action_heads = nn.ModuleList([nn.Linear(input_dim, dim) for dim in action_dims])
-
-    def forward(self, x):
-        return [head(x) for head in self.action_heads]
-
-
-# ========== 5. 自定义策略网络（Feature + GRU + Action） ==========
-class CustomPolicy(BaseFeaturesExtractor):
-    def __init__(self, observation_space: spaces.Box, action_dim):
-        super(CustomPolicy, self).__init__(observation_space, features_dim=128)
-
-        input_dim = observation_space.shape[0]
-        hidden_dim = 128  # 隐藏层大小
-        self.feature_extractor = MLPBase(input_dim, hidden_dim)
-        self.gru_layer = GRULayer(hidden_dim, hidden_dim)  # GRU 处理时间序列
-        self.act_layer = ACTLayer(hidden_dim, action_dim)
-
-    def forward(self, x):
-        features = self.feature_extractor(x)
-        features = self.gru_layer(features)
-        return features  # 只返回 Tensor，不要返回 Tuple
 
 
 def get_config():
@@ -239,7 +175,7 @@ def setup_logging(env_id=0, log_file=None):
 if __name__ == "__main__":
     num_envs = 16  # 设定 8 个并行环境（根据 GPU 性能调整）
 
-    log_file = "./train/result/train_shoot3.log"
+    log_file = "./train/result/train_shoot4.log"
 
     # 创建并行环境
     def make_env(env_id):
@@ -252,12 +188,12 @@ if __name__ == "__main__":
 
     # 定义 PPO 模型（自定义 MLP 作为特征提取器）
     policy_kwargs = dict(
-        features_extractor_class=CustomPolicy,
+        features_extractor_class=CustomActorCriticPolicy,
         features_extractor_kwargs=dict(action_dim=env.action_space)
     )
 
     # 模型路径
-    model_path = "./trained_model/shoot_missile/ppo_air_combat_2.zip"
+    model_path = "./trained_model/shoot_missile/ppo_air_combat_3.zip"
 
     if os.path.exists(model_path):
         print("✅ 加载已有模型继续训练...")
@@ -289,7 +225,7 @@ if __name__ == "__main__":
     # 创建 checkpoint 回调，每 10 万步保存一次
     checkpoint_callback = CheckpointCallback(
         save_freq=10_000,  # 每 1*num_env 万步保存一次
-        save_path="./trained_model/shoot_missile_checkpoints2/",  # 保存文件夹
+        save_path="./trained_model/shoot_missile_checkpoints4/",  # 保存文件夹
         name_prefix="ppo_air_combat_shoot"  # 文件名前缀
     )
 
@@ -301,7 +237,7 @@ if __name__ == "__main__":
     )
 
     # 最终训练完成后保存一次完整模型
-    model.save("./trained_model/shoot_missile/ppo_air_combat_3")
+    model.save("./trained_model/shoot_missile/ppo_air_combat_4")
 
     # 关闭环境
     env.close()

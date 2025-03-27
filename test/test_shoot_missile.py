@@ -3,6 +3,7 @@ import gym
 import torch
 import numpy as np
 from adapter.adapter_shoot_missile import SB3SingleCombatEnv
+from utils.situation_evaluator import SituationNet, predict_situation
 
 
 def run_model_test(model_path, env_config, num_episodes=10, render=False):
@@ -28,18 +29,25 @@ def run_model_test(model_path, env_config, num_episodes=10, render=False):
     episode_rewards = []
 
     for episode in range(num_episodes):
+        render_file = f'./render_train/shoot3/a_test_{episode}'
+        env.render(mode="txt", filepath=render_file, tacview=None)
+
         obs, _ = env.reset()
         done = False
         total_reward = 0
 
         while not done:
             action, _ = model.predict(obs, deterministic=True)
+
+            # action shoot
+
+
             obs, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
             total_reward += reward
 
             if render:
-                env.render()
+                env.render(mode="txt", filepath=render_file, tacview=None)
 
         episode_rewards.append(total_reward)
         print(f"🎯 Episode {episode + 1}: Reward = {total_reward:.2f}")
@@ -52,9 +60,11 @@ def run_model_test(model_path, env_config, num_episodes=10, render=False):
 
 
 if __name__ == "__main__":
+
+
     avg = run_model_test(
-        model_path="trained_model/shoot_missile/ppo_air_combat.zip",
-        env_config='1v1/ShootMissile/HierarchyVsBaseline_self',
+        model_path="trained_model/shoot_missile/ppo_air_combat4.zip",
+        env_config='1v1/ShootMissile/HierarchyVsBaselineSelf',
         num_episodes=5,
         render=False  # 如果你的环境支持图形渲染，可以设为 True
     )

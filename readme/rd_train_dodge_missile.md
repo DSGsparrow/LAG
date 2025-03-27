@@ -1,3 +1,7 @@
+# train: dodge missile 2
+train_dodge_missile.py
+
+
 # train: dodge missile
 train_shoot_missile.py
 

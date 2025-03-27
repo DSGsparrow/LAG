@@ -6,6 +6,9 @@ import copy
 from typing import Dict, Any, Tuple
 import logging
 
+from torch.utils.tensorboard import SummaryWriter
+from collections import deque
+
 from utils.init_state import my_aircraft, calculate_enemy_position
 
 from .env_base import BaseEnv
@@ -106,6 +109,13 @@ class SingleCombatEnvShoot(BaseEnv):
         self.cumulative_reward = 0
         self.render_path = getattr(self.config, 'render_path', "render_train/shoot2")
         self.render_file = get_unique_filename(env_id, 'baseline_dodge', self.render_path)
+
+        # === TensorBoard 记录器（env 级别）===
+        self.tb_writer = SummaryWriter(log_dir=f"./ppo_fire_debug/env_{env_id}")
+        self.tb_step = 0
+        self.success_counter = 0
+        self.episode_counter = 0
+        self.success_queue = deque(maxlen=100)  # 最近100局命中情况
 
     def load_task(self):
         taskname = getattr(self.config, 'task', None)
@@ -274,5 +284,14 @@ class SingleCombatEnvShoot(BaseEnv):
 
             # logger = logging.getLogger()  # 继承主 logger
             logging.info("render_result: " + str(result))
+
+            self.tb_writer.add_scalar("success", float(shoot_success), self.tb_step)
+            self.tb_writer.add_scalar("episode_reward", self.cumulative_reward, self.tb_step)
+
+            self.success_queue.append(int(shoot_success))
+            win_rate = sum(self.success_queue) / len(self.success_queue)
+            self.tb_writer.add_scalar("win_rate", win_rate, self.tb_step)
+
+        self.tb_step += 1
 
         return self._pack(obs), ego_reward, ego_done, info

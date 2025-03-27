@@ -300,13 +300,15 @@ class SingleCombatShootMissileTask(SingleCombatDodgeMissileTask):
             altitude_diff = obs[10] * 1000
             AO = obs[11] / np.pi * 180
             TA = obs[12] / np.pi * 180
+            ego_v = env.agents[agent_id].get_velocity()
+            enm_v = env.agents[agent_id].enemies[0].get_velocity()
             if shoot_flag:
                 new_missile_uid = agent_id + str(self.remaining_missiles[agent_id])
                 env.add_temp_simulator(
                     MissileSimulator.create(parent=agent, target=agent.enemies[0], uid=new_missile_uid))
                 self.remaining_missiles[agent_id] -= 1
                 logging.info(f'{agent_id} launch mission! Total Steps={env.current_step}, distance={distance}, '
-                             f'altitude diff={altitude_diff}, AO={AO}, TA={TA}')
+                             f'altitude diff={altitude_diff}, AO={AO}, TA={TA}, ego_v={ego_v}, enm_v={enm_v}')
 
 
 class HierarchicalSingleCombatShootTask(HierarchicalSingleCombatTask, SingleCombatShootMissileTask):
