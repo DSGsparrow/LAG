@@ -14,7 +14,7 @@ import os
 import logging
 
 from LAGmaster.envs.JSBSim.envs import SingleCombatEnv, SingleControlEnv, SingleCombatEnvShoot
-from net.net_shoot_with_prior import CustomActorCriticPolicy
+from net.net_shoot_imitation import CustomPolicy
 
 # ========== 1. 适配 SB3 的自定义环境 ==========
 class SB3SingleCombatEnv(gymnasium.Env):
@@ -173,9 +173,9 @@ def setup_logging(env_id=0, log_file=None):
 
 # ========== 6. 训练 PPO ==========
 if __name__ == "__main__":
-    num_envs = 16  # 设定 8 个并行环境（根据 GPU 性能调整）
+    num_envs = 1  # 设定 8 个并行环境（根据 GPU 性能调整）
 
-    log_file = "./train/result/train_shoot4.log"
+    log_file = "./train/result/train_shoot_imi.log"
 
     # 创建并行环境
     def make_env(env_id):
@@ -188,12 +188,12 @@ if __name__ == "__main__":
 
     # 定义 PPO 模型（自定义 MLP 作为特征提取器）
     policy_kwargs = dict(
-        features_extractor_class=CustomActorCriticPolicy,
+        features_extractor_class=CustomPolicy,
         features_extractor_kwargs=dict(action_dim=env.action_space)
     )
 
     # 模型路径
-    model_path = "./trained_model/shoot_missile/ppo_air_combat_3.zip"
+    model_path = "./trained_model/imitation_shoot/imitation_pretrained.zip"
 
     if os.path.exists(model_path):
         print("✅ 加载已有模型继续训练...")
@@ -225,7 +225,7 @@ if __name__ == "__main__":
     # 创建 checkpoint 回调，每 10 万步保存一次
     checkpoint_callback = CheckpointCallback(
         save_freq=10_000,  # 每 1*num_env 万步保存一次
-        save_path="./trained_model/shoot_missile_checkpoints4/",  # 保存文件夹
+        save_path="./trained_model/shoot_missile_checkpoints_imi/",  # 保存文件夹
         name_prefix="ppo_air_combat_shoot"  # 文件名前缀
     )
 
@@ -237,7 +237,7 @@ if __name__ == "__main__":
     )
 
     # 最终训练完成后保存一次完整模型
-    model.save("./trained_model/shoot_missile/ppo_air_combat_4")
+    model.save("./trained_model/shoot_missile/ppo_air_combat_imi")
 
     # 关闭环境
     env.close()

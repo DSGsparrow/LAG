@@ -1,5 +1,5 @@
 # task config
-task: hierarchical_singlecombat_shoot
+task: singlecombat_shoot
 
 # file path
 render_path: "./render_train/shoot3"

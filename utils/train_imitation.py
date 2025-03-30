@@ -7,8 +7,9 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from gym import spaces
 from gym.spaces import MultiDiscrete
+from sklearn.model_selection import train_test_split
 
-from net.net_shoot_missile import MLPBase, GRULayer, ACTLayer, CustomPolicy
+from net.net_shoot_imitation import MLPBase, GRULayer, ACTLayer, CustomPolicy
 from adapter.adapter_dodge_missile import SB3SingleCombatEnv
 
 
@@ -54,25 +55,68 @@ class ExpertDataset(Dataset):
 
 # 训练并导出 PPO zip 模型
 
-def train_imitation_and_export(data_dir, env, zip_path="trained_model/imitation_shoot/imitation_pretrained.zip"):
+def train_imitation_and_export(data_dir, env, zip_path="imitation_pretrained.zip", patience=5):
     dataset = ExpertDataset(data_dir)
-    loader = DataLoader(dataset, batch_size=64, shuffle=True)
+
+    # ✅ 拆分训练/验证集
+    train_idx, val_idx = train_test_split(np.arange(len(dataset)), test_size=0.1, shuffle=True)
+    train_dataset = torch.utils.data.Subset(dataset, train_idx)
+    val_dataset = torch.utils.data.Subset(dataset, val_idx)
+
+    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=64)
 
     obs_dim = dataset[0][0].shape[0]
     imit_model = ImitationPolicy(obs_dim)
     optim = torch.optim.Adam(imit_model.parameters(), lr=1e-3)
     loss_fn = nn.MSELoss()
 
-    for epoch in range(50):
-        total_loss = 0
-        for obs_batch, act_batch in loader:
-            pred = imit_model(obs_batch)
-            loss = loss_fn(pred, act_batch)
-            optim.zero_grad()
-            loss.backward()
-            optim.step()
-            total_loss += loss.item() * obs_batch.size(0)
-        print(f"[Epoch {epoch+1}] Loss: {total_loss / len(dataset):.4f}")
+    best_val_loss = float('inf')
+    patience_counter = 0
+
+    # for epoch in range(100):  # 最多训练 100 轮
+    #     imit_model.train()
+    #     total_loss = 0
+    #     for obs_batch, act_batch in train_loader:
+    #         pred = imit_model(obs_batch)
+    #         loss = loss_fn(pred, act_batch)
+    #         optim.zero_grad()
+    #         loss.backward()
+    #         optim.step()
+    #         total_loss += loss.item() * obs_batch.size(0)
+    #     train_loss = total_loss / len(train_dataset)
+    #
+    #     # 验证集 loss
+    #     imit_model.eval()
+    #     with torch.no_grad():
+    #         val_loss = 0
+    #         for obs_batch, act_batch in val_loader:
+    #             pred = imit_model(obs_batch)
+    #             loss = loss_fn(pred, act_batch)
+    #             val_loss += loss.item() * obs_batch.size(0)
+    #         val_loss = val_loss / len(val_dataset)
+    #
+    #     print(f"[Epoch {epoch + 1}] Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
+    #
+    #     # Early stopping
+    #     if val_loss < best_val_loss:
+    #         best_val_loss = val_loss
+    #         patience_counter = 0
+    #         best_model_sd = imit_model.state_dict()
+    #     else:
+    #         patience_counter += 1
+    #         if patience_counter >= patience:
+    #             print(f"⏹️ 早停触发：验证集 {patience} 次未提升，提前停止训练")
+    #             break
+
+    best_model_sd = torch.load('imitation_pretrained_pytorch.pt')
+
+    # 恢复最佳参数
+    imit_model.load_state_dict(best_model_sd)
+
+    # ✅ 保存 PyTorch 原始模型（防止 zip 失败）
+    torch.save(best_model_sd, zip_path.replace(".zip", "_pytorch.pt"))
+    print(f"📦 已保存为原始 PyTorch 模型: {zip_path.replace('.zip', '_pytorch.pt')}")
 
     # 初始化 SB3 PPO 模型
     policy_kwargs = dict(
@@ -85,7 +129,7 @@ def train_imitation_and_export(data_dir, env, zip_path="trained_model/imitation_
     ppo.policy.features_extractor.feature_extractor.load_state_dict({
         k.replace("feature_extractor.", ""): v for k, v in imit_sd.items() if "feature_extractor" in k
     }, strict=False)
-    ppo.policy.features_extractor.gru.load_state_dict({
+    ppo.policy.features_extractor.gru_layer.load_state_dict({
         k.replace("gru.", ""): v for k, v in imit_sd.items() if "gru" in k
     }, strict=False)
 
