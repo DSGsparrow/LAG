@@ -2,8 +2,8 @@
 task: hierarchical_singlecombat_dodge_missile
 
 # file path
-render_path: "./render_train/dodge"
-enm_ver: "shoot1"
+render_path: "./render_train/dodge2"
+enm_ver: "pursue_rule"
 
 # simulation config
 sim_freq: 60
@@ -18,7 +18,7 @@ acceleration_limit_z: 10.0
 
 # aircraft config
 use_baseline: true
-baseline_type: shoot1
+baseline_type: shoot_teacher
 aircraft_configs: {
   A0100: {
     color: Red,
@@ -68,4 +68,4 @@ AltitudeReward_Kv: 0.2
 EventDrivenReward_scale: 1
 EventDrivenReward_potential: true
 
-EndAltitudeReward_scale: 10.0
+EndAltitudeReward_scale: 5.0

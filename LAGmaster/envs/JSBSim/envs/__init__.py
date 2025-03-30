@@ -4,3 +4,4 @@ from .multiplecombat_env import MultipleCombatEnv
 from .singlecombat_env_test import SingleCombatEnvTest
 from .singlecombat_env_test import random_init_state
 from .singlecombat_env_shoot import SingleCombatEnvShoot
+from .singlecombat_env_dodge import SingleCombatEnvDodge

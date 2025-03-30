@@ -3,3 +3,4 @@
 \render_train
 \render_result_random
 \ppo_air_combat_tb
+\trained_model

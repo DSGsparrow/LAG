@@ -46,7 +46,7 @@ class PostureReward(BaseRewardFunction):
                                     enm.get_velocity()])
             AO, TA, R = get_AO_TA_R(ego_feature, enm_feature)
             orientation_reward = self.orientation_fn(AO, TA)
-            range_reward = self.distance_reward(R / 1000, missile_num)
+            range_reward = self.range_fn(R / 1000)
             new_reward += orientation_reward * range_reward
         return self._process(new_reward, agent_id, (orientation_reward, range_reward))
 

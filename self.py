@@ -1,34 +1,18 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 
-def distance_reward_linear(distance, center=7000, max_distance=10000, sigma=1000):
-    """
-    分段连续距离奖励函数：
-    - <= center: 高斯函数（下降慢）
-    - > center: 线性从 1 降到 -1（直观明确）
-    - > max_distance: 固定为 -1
-    """
-    if distance <= center:
-        # 高斯函数下降慢一点：sigma 调大
-        return np.exp(-((distance - center) ** 2) / (2 * sigma ** 2))
-    elif distance <= max_distance:
-        # 线性递减：从 1 到 -1
-        ratio = (distance - center) / (max_distance - center)  # 0 到 1
-        return 1 - 2 * ratio
-    else:
-        return -1.0
+from utils.situation_evaluator import SituationNet,predict_situation
 
+# **测试预测**
+test_input = {
+    "distance": 8000.0, "angle": 0.0, "alt": 1111.1111111111095, "speed": 928.5714285714286,
+    # "success": True,
+    # "reward": 820.314,
+    # "total_steps": 300
+}
 
-
-xs = np.linspace(5000, 10500, 500)
-ys = [distance_reward_linear(x) for x in xs]
-
-plt.plot(xs, ys)
-plt.axvline(9500, color='gray', linestyle='--', label='center')
-plt.axvline(10000, color='red', linestyle='--', label='max_distance')
-plt.title("Simple Distance-Based Reward (Gaussian + Linear)")
-plt.xlabel("Distance (m)")
-plt.ylabel("Reward")
-plt.legend()
-plt.grid(True)
-plt.show()
+model_path = "trained_model/shoot_prediction/situation_model2.pth"
+scaler_path = "trained_model/shoot_prediction/scaler2.npy"
+predicted_score = predict_situation(test_input, model_path, scaler_path)
+print(f"预测态势评分: {predicted_score:.4f}")

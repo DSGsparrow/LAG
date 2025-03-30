@@ -16,7 +16,7 @@ import os
 import logging
 
 from net.net_shoot_missile import MLPBase, GRULayer, ACTLayer, CustomPolicy
-from adapter.adapter_shoot_missile import SB3SingleCombatEnv
+from adapter.adapter_dodge_missile import SB3SingleCombatEnv
 
 from LAGmaster.envs.JSBSim.envs import SingleCombatEnv, SingleControlEnv, SingleCombatEnvTest
 
@@ -99,9 +99,9 @@ def setup_logging(log_file = None):
 
 # ========== 6. 训练 PPO ==========
 if __name__ == "__main__":
-    num_envs = 1  # 设定 8 个并行环境（根据 GPU 性能调整）
+    num_envs = 16    # 设定 8 个并行环境（根据 GPU 性能调整）
 
-    log_file = "./train/result/train_dodge.log"
+    log_file = "./train/result/train_dodge2.log"
 
     # 创建并行环境
     def make_env(env_id):
@@ -126,7 +126,7 @@ if __name__ == "__main__":
         model = PPO.load(
             model_path,
             env=env,
-            tensorboard_log="./ppo_air_combat_tb/",
+            tensorboard_log="./ppo_air_combat_tb/dodge2/",
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
     else:
@@ -145,26 +145,26 @@ if __name__ == "__main__":
             clip_range=0.2,
             ent_coef=0.02,
             verbose=1,
-            tensorboard_log="./ppo_air_combat_tb/",
+            tensorboard_log="./ppo_air_combat_tb/dodge2/",
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
 
     # 创建 checkpoint 回调，每 10 万步保存一次
     checkpoint_callback = CheckpointCallback(
         save_freq=10_000,  # 每 1*num_env 万步保存一次
-        save_path="./trained_model/dodge_missile_checkpoints/",  # 保存文件夹
+        save_path="./trained_model/dodge_missile_checkpoints2/",  # 保存文件夹
         name_prefix="ppo_air_combat_dodge"  # 文件名前缀
     )
 
     # 开始训练，同时记录 TensorBoard 和保存中间模型
     model.learn(
         total_timesteps=3_000_000,
-        tb_log_name="test",
+        tb_log_name="test_dodge2",
         callback=checkpoint_callback
     )
 
     # 最终训练完成后保存一次完整模型
-    model.save("./trained_model/dodge_missile/ppo_air_combat_dodge")
+    model.save("./trained_model/dodge_missile/ppo_air_combat_dodge2")
 
     # 关闭环境
     env.close()

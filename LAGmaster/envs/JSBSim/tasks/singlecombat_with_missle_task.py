@@ -48,12 +48,14 @@ class SingleCombatDodgeMissileTask(SingleCombatTask):
         ego_feature = np.array([*ego_obs_list[:3], *ego_cur_ned, *ego_obs_list[6:9]])
         enm_feature = np.array([*enm_obs_list[:3], *enm_cur_ned, *enm_obs_list[6:9]])
 
-        state = np.zeros(len(ego_feature) + len(enm_feature))
+        state = np.concatenate([ego_feature, enm_feature], axis=0)
 
-        for j in range(len(ego_feature)):
-            state[j] = ego_feature[j]
-        for j in range(len(enm_feature)):
-            state[len(ego_feature) + j] = enm_feature[j]
+        # state = np.zeros(len(ego_feature) + len(enm_feature))
+        #
+        # for j in range(len(ego_feature)):
+        #     state[j] = ego_feature[j]
+        # for j in range(len(enm_feature)):
+        #     state[len(ego_feature) + j] = enm_feature[j]
 
         # missile_sim = env.agents[agent_id].check_missile_warning()
         # if missile_sim is not None:
@@ -198,22 +200,22 @@ class HierarchicalSingleCombatDodgeMissileTask(HierarchicalSingleCombatTask, Sin
             # 敌方智能体：ShootAgent 调用的自己SB3上训练的PPO
             action = self.baseline_agent.get_action(env.agents[agent_id])
             # np.ndarray(4,)
-            norm_action = self.baseline_agent.normalize_action(env, agent_id, action)
+            # norm_action = self.baseline_agent.normalize_action(env, agent_id, action)
+            norm_action = action[:-1]
             # 4位杆量，可以直接传
             self._shoot_action[agent_id] = action[-1]
             # 最后的发射标志位
-
             # prior
-            obs = self.get_obs(env, agent_id)
-            ego_AO = obs[11] / np.pi * 180
-            ego_TA = obs[12] / np.pi * 180
-            distance = obs[13]
-
-            if distance > 1:  # 距离超过10公里
-                self._shoot_action[agent_id] = 0
-
-            elif ego_AO > 50.:  # 视线角过大不可以打弹
-                self._shoot_action[agent_id] = 0
+            # obs = self.get_obs(env, agent_id)
+            # ego_AO = obs[11] / np.pi * 180
+            # ego_TA = obs[12] / np.pi * 180
+            # distance = obs[13]
+            #
+            # if distance > 1:  # 距离超过10公里
+            #     self._shoot_action[agent_id] = 0
+            #
+            # elif ego_AO > 50.:  # 视线角过大不可以打弹
+            #     self._shoot_action[agent_id] = 0
 
             return norm_action
 
@@ -252,12 +254,17 @@ class HierarchicalSingleCombatDodgeMissileTask(HierarchicalSingleCombatTask, Sin
         for agent_id, agent in env.agents.items():
             # [RL-based missile launch with limited condition]
             shoot_flag = agent.is_alive and self._shoot_action[agent_id] and self.remaining_missiles[agent_id] > 0
+
+            obs = self.get_obs(env, agent_id)
+            state = self.get_states(env, agent_id)
+
             if shoot_flag:
                 new_missile_uid = agent_id + str(self.remaining_missiles[agent_id])
                 env.add_temp_simulator(
                     MissileSimulator.create(parent=agent, target=agent.enemies[0], uid=new_missile_uid))
                 self.remaining_missiles[agent_id] -= 1
-                logging.info(f'{agent_id} launch mission! Total Steps={env.current_step}')
+                logging.info(f'{agent_id} launch mission! '
+                             f'Total Steps={env.current_step}, obs={obs}, state={state}, current_reward={env.cumulative_reward}')
 
 
 class SingleCombatShootMissileTask(SingleCombatDodgeMissileTask):
@@ -307,7 +314,7 @@ class SingleCombatShootMissileTask(SingleCombatDodgeMissileTask):
                 env.add_temp_simulator(
                     MissileSimulator.create(parent=agent, target=agent.enemies[0], uid=new_missile_uid))
                 self.remaining_missiles[agent_id] -= 1
-                logging.info(f'{agent_id} launch mission! Total Steps={env.current_step}, distance={distance}, '
+                logging.info(f'{agent_id} launch mission! Current Steps={env.current_step}, distance={distance}, '
                              f'altitude diff={altitude_diff}, AO={AO}, TA={TA}, ego_v={ego_v}, enm_v={enm_v}')
 
 

@@ -5,6 +5,9 @@ from typing import Literal
 import sys
 import parser
 import re
+import os
+import datetime
+import uuid
 
 from stable_baselines3.common.vec_env.util import obs_space_info
 from stable_baselines3 import PPO
@@ -20,6 +23,9 @@ from ..termination_conditions import ExtremeState, LowAltitude, Overload, Timeou
 from ..reward_functions import AltitudeReward, PostureReward, EventDrivenReward
 from ..utils.utils import get_AO_TA_R, get2d_AO_TA_R, in_range_rad, LLA2NEU, get_root_dir
 from ..model.baseline_actor import BaselineActor
+
+from utils.situation_evaluator import SituationNet
+from utils.shoot_rule import fuzzy_should_attack
 
 
 class SingleCombatTask(BaseTask):
@@ -215,6 +221,8 @@ class SingleCombatTask(BaseTask):
             return StraightFlyAgent()
         elif match_shoot:
             return ShootAgent(int(match_shoot.group(1)))
+        elif name == 'shoot_teacher':
+            return ShootTeacherAgent()
         else:
             raise NotImplementedError
 
@@ -304,7 +312,7 @@ class BaselineAgent:
             c.velocities_vc_mps,                #  8. vc        (unit: m/s)
             c.position_h_sl_m                   #  9. altitude  (unit: m)
         ]
-        self.reset()
+        # self.reset()
 
     def normalize_action(self, action):
         norm_act = np.zeros(4)
@@ -927,8 +935,137 @@ class ShootAgent:
         self._inner_rnn_states = np.zeros((1, 1, 128))
 
 
+class ShootTeacherAgent(BaselineAgent):
+    def __init__(self) -> None:
+        super().__init__()
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.situation_predict_model = SituationNet().to(device)
 
+        self.state_var2 = [
+            c.position_long_gc_deg,  # 0. lontitude  (unit: °)
+            c.position_lat_geod_deg,  # 1. latitude   (unit: °)
+            c.position_h_sl_m,  # 2. altitude   (unit: m)
+            c.attitude_roll_rad,  # 3. roll       (unit: rad)
+            c.attitude_pitch_rad,  # 4. pitch      (unit: rad)
+            c.attitude_heading_true_rad,  # 5. yaw        (unit: rad)
+            c.velocities_v_north_mps,  # 6. v_north    (unit: m/s)
+            c.velocities_v_east_mps,  # 7. v_east     (unit: m/s)
+            c.velocities_v_down_mps,  # 8. v_down     (unit: m/s)
+            c.velocities_u_mps,  # 9. v_body_x   (unit: m/s)
+            c.velocities_v_mps,  # 10. v_body_y  (unit: m/s)
+            c.velocities_w_mps,  # 11. v_body_z  (unit: m/s)
+            c.velocities_vc_mps,  # 12. vc        (unit: m/s)
+        ]
 
+        self.trajectory = []  # 当前 episode 的状态-动作序列
+        self.episode_id = 0
+        self.save_dir = "render_train/dodge2/imitation"
+        os.makedirs(self.save_dir, exist_ok=True)
+
+        # self.reset()
+
+    def set_delta_value(self, sim: AircraftSimulator):
+        # NOTE: only adapt for 1v1
+        ego_x, ego_y, ego_z = sim.get_position()
+        ego_vx, ego_vy, ego_vz = sim.get_velocity()
+        enm_x, enm_y, enm_z = sim.enemies[0].get_position()
+        # delta altitude
+        delta_altitude = enm_z - ego_z
+        # delta heading
+        ego_v = np.linalg.norm([ego_vx, ego_vy])
+        delta_x, delta_y = enm_x - ego_x, enm_y - ego_y
+        R = np.linalg.norm([delta_x, delta_y])
+        proj_dist = delta_x * ego_vx + delta_y * ego_vy
+        ego_AO = np.arccos(np.clip(proj_dist / (R * ego_v + 1e-8), -1, 1))
+        side_flag = np.sign(np.cross([ego_vx, ego_vy], [delta_x, delta_y]))
+        delta_heading = ego_AO * side_flag
+        # delta velocity
+        delta_velocity = sim.enemies[0].get_property_value(c.velocities_u_mps) - \
+                         sim.get_property_value(c.velocities_u_mps)
+
+        if sim.num_left_missiles > 0:
+            delta_velocity = 400 - \
+                         sim.get_property_value(c.velocities_u_mps)
+        else:
+            pass
+
+        return np.array([delta_altitude, delta_heading, delta_velocity])
+
+    def get_obs(self, sim: AircraftSimulator):
+        norm_obs = np.zeros(21)
+        ego_obs_list = np.array(sim.get_property_values(self.state_var2))
+        enm_obs_list = np.array(sim.enemies[0].get_property_values(self.state_var2))
+        # (0) extract feature: [north(km), east(km), down(km), v_n(mh), v_e(mh), v_d(mh)]
+        ego_cur_ned = LLA2NEU(*ego_obs_list[:3], 120.0, 60.0, 0.0)
+        enm_cur_ned = LLA2NEU(*enm_obs_list[:3], 120.0, 60.0, 0.0)
+        ego_feature = np.array([*ego_cur_ned, *(ego_obs_list[6:9])])
+        enm_feature = np.array([*enm_cur_ned, *(enm_obs_list[6:9])])
+        # (1) ego info normalization
+        norm_obs[0] = ego_obs_list[2] / 5000  # 0. ego altitude   (unit: 5km)
+        norm_obs[1] = np.sin(ego_obs_list[3])  # 1. ego_roll_sin
+        norm_obs[2] = np.cos(ego_obs_list[3])  # 2. ego_roll_cos
+        norm_obs[3] = np.sin(ego_obs_list[4])  # 3. ego_pitch_sin
+        norm_obs[4] = np.cos(ego_obs_list[4])  # 4. ego_pitch_cos
+        norm_obs[5] = ego_obs_list[9] / 340  # 5. ego v_body_x   (unit: mh)
+        norm_obs[6] = ego_obs_list[10] / 340  # 6. ego v_body_y   (unit: mh)
+        norm_obs[7] = ego_obs_list[11] / 340  # 7. ego v_body_z   (unit: mh)
+        norm_obs[8] = ego_obs_list[12] / 340  # 8. ego vc   (unit: mh)
+        # (2) relative info w.r.t enm state
+        ego_AO, ego_TA, R, side_flag = get2d_AO_TA_R(ego_feature, enm_feature, return_side=True)
+        norm_obs[9] = (enm_obs_list[9] - ego_obs_list[9]) / 340
+        norm_obs[10] = (enm_obs_list[2] - ego_obs_list[2]) / 1000
+        norm_obs[11] = ego_AO
+        norm_obs[12] = ego_TA
+        norm_obs[13] = R / 10000
+        norm_obs[14] = side_flag
+        return norm_obs
+
+    def reset(self):
+        self.rnn_states = np.zeros((1, 1, 128))
+
+        # 回合结束，保存当前 trajectory
+        if self.trajectory:
+            obs_arr = np.array([pair[0] for pair in self.trajectory])
+            action_arr = np.array([pair[1] for pair in self.trajectory])
+
+            # 自动生成文件名
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            unique_id = uuid.uuid4().hex[:6]  # 6位短 UUID
+            filename = f"expert_ep_{timestamp}_{unique_id}.npz"
+            path = os.path.join(self.save_dir, filename)
+            np.savez_compressed(path, obs=obs_arr, action=action_arr)
+
+            # print(f"[Saved] Episode {self.episode_id:04d} | Steps: {len(self.trajectory)} | Path: {path}")
+
+            self.episode_id += 1
+            self.trajectory.clear()  # 准备下一回合
+
+    def get_action(self, sim: AircraftSimulator):
+        delta_value = self.set_delta_value(sim)
+        observation = self.get_observation(sim, delta_value)
+        _action, self.rnn_states = self.actor(observation, self.rnn_states)
+        action = _action.detach().cpu().numpy().squeeze()
+
+        # rule based shoot
+        obs = self.get_obs(sim)
+        distance = obs[13] * 10000
+        ego_AO = obs[11] / np.pi * 180
+        ego_TA = obs[12] / np.pi * 180
+        height_diff = - obs[10] * 1000
+        ego_vx = obs[5]
+        ego_vy = obs[6]
+        ego_vz = obs[7]
+        ego_v = np.linalg.norm([ego_vx, ego_vy, ego_vz]) * 340
+
+        shoot_decision = fuzzy_should_attack(distance, ego_AO, ego_v, height_diff)
+
+        action_norm = self.normalize_action(action)
+        action_all = np.concatenate([action_norm, np.array([shoot_decision]) ])
+
+        # 保存当前状态-动作对
+        self.trajectory.append((obs.copy(), action_all.copy()))
+
+        return action_all
 
 
 

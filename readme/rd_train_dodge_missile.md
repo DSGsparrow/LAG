@@ -1,5 +1,16 @@
 # train: dodge missile 2
-train_dodge_missile.py
+train_dodge_missile.py  
+主要用来记录数据  
+用来对状态进行攻击评估和模仿学习
+
+## 智能体
+我方：dodge1  
+敌方：pursue + 发射规则  
++ 打弹前加速
++ 基于**规则**来发射
++ 也可以计算命中率
+
+## 
 
 
 # train: dodge missile

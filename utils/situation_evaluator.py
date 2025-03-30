@@ -21,14 +21,14 @@ def load_data(json_file):
                 entry["angle"],
                 entry["alt"],
                 entry["speed"],
-                1 if entry["success"] else 0,  # 布尔值转数值
-                entry["reward"],
-                entry["total_steps"]
+                # 1 if entry["success"] else 0,  # 布尔值转数值
+                # entry["reward"],
+                # entry["total_steps"]
             ]
 
             # 增加高分样本
             if entry["success"]:
-                for i in range(10):
+                for i in range(50):
                     data.append(features)
                     scores.append(entry["situation_score"])  # 目标值（分数）
             else:
@@ -43,7 +43,7 @@ class SituationNet(nn.Module):
     def __init__(self):
         super(SituationNet, self).__init__()
         self.model = nn.Sequential(
-            nn.Linear(7, 128),
+            nn.Linear(4, 128),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(128, 64),
@@ -92,9 +92,9 @@ def predict_situation(input_data, model_path="situation_model.pth", scaler_path=
         input_data["angle"],
         input_data["alt"],
         input_data["speed"],
-        1 if input_data["success"] else 0,
-        input_data["reward"],
-        input_data["total_steps"]
+        # 1 if input_data["success"] else 0,
+        # input_data["reward"],
+        # input_data["total_steps"]
     ], dtype=np.float32).reshape(1, -1)
 
     input_scaled = torch.tensor(scaler.transform(input_features), dtype=torch.float32).to(device)
@@ -108,6 +108,10 @@ def predict_situation(input_data, model_path="situation_model.pth", scaler_path=
 
 # **主程序：训练模型**
 if __name__ == "__main__":
+    model_path = "trained_model/shoot_prediction/situation_model2.pth"
+    scaler_path = "trained_model/shoot_prediction/scaler2.npy"
+
+
     # **加载数据**
     X, y = load_data("./test_result/dodge_test/evaluated_results_all.json")
 
@@ -116,7 +120,7 @@ if __name__ == "__main__":
     X_scaled = scaler.fit_transform(X)
 
     # **保存归一化参数**
-    np.save("scaler.npy", [scaler.mean_, scaler.scale_])
+    np.save(scaler_path, [scaler.mean_, scaler.scale_])
 
     # **划分训练集和测试集**
     X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
@@ -138,7 +142,7 @@ if __name__ == "__main__":
     # **初始化模型**
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SituationNet().to(device)
-    criterion = WeightedMSELoss(high_weight=5)  # 降低高分样本的权重
+    criterion = WeightedMSELoss(high_weight=10)  # 降低高分样本的权重
     optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=0.001)
 
     # **训练模型**
@@ -179,7 +183,7 @@ if __name__ == "__main__":
         if val_loss < best_loss:
             best_loss = val_loss
             early_stopping_counter = 0
-            torch.save(model.state_dict(), "situation_model.pth")  # 保存最优模型
+            torch.save(model.state_dict(), "trained_model/shoot_prediction/situation_model.pth")  # 保存最优模型
         else:
             early_stopping_counter += 1
             if early_stopping_counter >= patience:
@@ -187,7 +191,7 @@ if __name__ == "__main__":
                 break
 
     # **测试模型**
-    model.load_state_dict(torch.load("situation_model.pth"))  # 加载最佳模型
+    model.load_state_dict(torch.load("trained_model/shoot_prediction/situation_model.pth"))  # 加载最佳模型
     model.eval()
     test_loss = 0.0
     with torch.no_grad():
@@ -206,12 +210,12 @@ if __name__ == "__main__":
         "angle": 30,
         "alt": 1000,
         "speed": 400,
-        "success": True,
-        "reward": 820.314,
-        "total_steps": 300
+        # "success": True,
+        # "reward": 820.314,
+        # "total_steps": 300
     }
 
-    predicted_score = predict_situation(test_input)
+    predicted_score = predict_situation(test_input, model_path, scaler_path)
     print(f"预测态势评分: {predicted_score:.4f}")
 
 

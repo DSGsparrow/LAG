@@ -6,6 +6,9 @@ import copy
 from typing import Dict, Any, Tuple
 import logging
 
+from torch.utils.tensorboard import SummaryWriter
+from collections import deque
+
 from utils.init_state import my_aircraft, calculate_enemy_position
 
 from .env_base import BaseEnv
@@ -93,7 +96,7 @@ def get_unique_filename(env_id, enm_ver, folder="./render_result_random"):
     return filename
 
 
-class SingleCombatEnvShoot(BaseEnv):
+class SingleCombatEnvDodge(BaseEnv):
     """
     SingleCombatEnv is an one-to-one competitive environment.
     """
@@ -109,6 +112,13 @@ class SingleCombatEnvShoot(BaseEnv):
         self.render_path = getattr(self.config, 'render_path', "render_train/shoot2")
         self.enm_ver = getattr(self.config, 'enm_ver', 'shoot1')
         self.render_file = get_unique_filename(env_id, self.enm_ver, self.render_path)
+
+        # === TensorBoard 记录器（env 级别）===
+        self.tb_writer = SummaryWriter(log_dir=f"./ppo_fire_debug/env_{env_id}")
+        self.tb_step = 0
+        self.success_counter = 0
+        self.episode_counter = 0
+        self.success_queue = deque(maxlen=100)  # 最近100局命中情况
 
     def load_task(self):
         taskname = getattr(self.config, 'task', None)
@@ -259,8 +269,10 @@ class SingleCombatEnvShoot(BaseEnv):
                     "enemy_x": render_states[12], "enemy_y": render_states[13], "enemy_z": render_states[14],
                     "enemy_vx": render_states[15], "enemy_vy": render_states[16], "enemy_vz": render_states[17],
                 }
+                obs_log = obs['A0100']
             else:
                 state = None
+                obs_log = None
 
             total_steps = self.current_step
             result = {"enm_distance": self.current_enemy["enm_distance"],
@@ -272,11 +284,21 @@ class SingleCombatEnvShoot(BaseEnv):
                       "ego_speed": self.current_enemy["ego_speed"],
 
                       "success": dodge_success,
-                      "reward": self.cumulative_reward,
+                      "total_reward": self.cumulative_reward,
                       "total_steps": total_steps,  # 新增 Total Steps 记录
                       "state": state,
+                      "obs": obs_log,
                       }
 
             logging.info("render_result: " + str(result))
+
+            # self.tb_writer.add_scalar("success", float(dodge_success), self.tb_step)
+            self.tb_writer.add_scalar("episode_reward", self.cumulative_reward, self.tb_step)
+
+            self.success_queue.append(int(dodge_success))
+            win_rate = sum(self.success_queue) / len(self.success_queue)
+            self.tb_writer.add_scalar("win_rate", win_rate, self.tb_step)
+
+        self.tb_step += 1
 
         return self._pack(obs), ego_reward, ego_done, info
