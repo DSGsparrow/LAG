@@ -121197,3 +121197,12 @@
         0.        ])}
 2025-03-30 13:42:31,585 - INFO [PID 19324]- render txt name:./render_train/dodge2\env_10_pursue_rule_522.txt.acmi
 2025-03-30 13:42:31,586 - INFO [PID 22452]- render txt name:./render_train/dodge2\env_15_pursue_rule_527.txt.acmi
+2025-03-30 21:09:12,616 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_dodge2.log
+2025-03-30 21:09:12,660 - INFO [ENV 0] - render txt name:./render_train/dodge3\env_0_shoot_imi.txt.acmi
+2025-03-30 21:09:13,369 - INFO [ENV 0] - render txt name:./render_train/dodge3\env_0_shoot_imi.txt.acmi
+2025-03-30 21:14:28,431 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_dodge2.log
+2025-03-30 21:14:28,678 - INFO [ENV 0] - render txt name:./render_train/dodge3\env_0_shoot_imi.txt.acmi
+2025-03-30 21:14:29,354 - INFO [ENV 0] - render txt name:./render_train/dodge3\env_0_shoot_imi.txt.acmi
+2025-03-30 21:15:29,930 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_dodge2.log
+2025-03-30 21:15:30,180 - INFO [ENV 0] - render txt name:./render_train/dodge3\env_0_shoot_imi.txt.acmi
+2025-03-30 21:15:30,883 - INFO [ENV 0] - render txt name:./render_train/dodge3\env_0_shoot_imi.txt.acmi

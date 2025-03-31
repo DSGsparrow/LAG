@@ -3,22 +3,85 @@ import gymnasium
 import torch
 import torch.nn as nn
 import numpy as np
-
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.callbacks import CheckpointCallback
-
 from gymnasium import spaces
 import argparse
 import os
 import logging
 
-from net.net_shoot_missile import MLPBase, GRULayer, ACTLayer, CustomPolicy
-from adapter.adapter_dodge_missile import SB3SingleCombatEnv
+from LAGmaster.envs.JSBSim.envs import SingleCombatEnv, SingleControlEnv, SingleCombatEnvShoot
+from net.net_shoot_imitation import CustomPolicy
 
-from LAGmaster.envs.JSBSim.envs import SingleCombatEnv, SingleControlEnv, SingleCombatEnvTest
+# ========== 1. 适配 SB3 的自定义环境 ==========
+class SB3SingleCombatEnv(gymnasium.Env):
+    """将 SingleCombatEnvTest 适配为 SB3 兼容的 Gym 环境"""
+
+    def __init__(self, env_id, config_name):
+        super(SB3SingleCombatEnv, self).__init__()
+        self.env = SingleCombatEnvShoot(config_name, env_id)  # 你的原始环境
+        # obs_shape = self.env.get_obs().shape[0]  # 获取观测空间维度
+        # act_shape = self.env.get_action_space().shape[0]  # 获取动作空间维度
+        # 继承原始环境的动作空间和观察空间
+        # self.action_space = self.env.action_space
+
+        # 提取原始环境的 action_space
+        if isinstance(self.env.action_space, spaces.Tuple):
+            # 获取所有离散动作空间的维度
+            action_dims = []
+            for space in self.env.action_space.spaces:
+                if isinstance(space, spaces.MultiDiscrete):
+                    action_dims.extend(space.nvec)  # 展开 MultiDiscrete
+                elif isinstance(space, spaces.Discrete):
+                    action_dims.append(space.n)  # Discrete 直接添加
+                else:
+                    raise ValueError("Unsupported action space type: {}".format(type(space)))
+
+            # 转换为 MultiDiscrete
+            self.action_space = spaces.MultiDiscrete(action_dims)
+        else:
+            # raise ValueError("Unexpected action space type: {}".format(type(self.env.action_space)))
+            self.action_space = self.env.action_space
+
+        self.observation_space = self.env.observation_space
+
+        # # 定义 Gym 兼容的观测和动作空间
+        # self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float32)
+        # self.action_space = spaces.Box(low=-1, high=1, shape=(act_shape,), dtype=np.float32)
+
+    def step(self, action):
+        # 将长度为 4 的动作转换为长度为 (1,4) 的动作
+        # actual_action = action.reshape(-1, 3)  # 取第一个值
+        # 因为内部的环境，假设可能有多架飞机在控制，所有第一位都加了个序号
+        # reward 和dones什么的直接取值
+
+        action = np.expand_dims(action, axis=0) if action.ndim == 1 else action
+
+        obs, rewards, dones, info = self.env.step(action)
+
+        timeout = info.get('timeout', False)
+
+        observation, reward, terminated, truncated, info = obs[0], rewards.item(), dones.item(), timeout, info
+
+        # logging.info('test')
+
+        return observation, reward, terminated, truncated, info
+
+    def reset(self, seed=None, options=None):
+        """重置环境，支持 `seed` 以适配 SB3"""
+        super().reset(seed=seed)  # 让 Gym 兼容 SB3 的 `seed`
+        obs = self.env.reset()
+        observation = obs[0]
+        return observation, None
+
+    def close(self):
+        return self.env.close()
+
+    def render(self, mode="txt", filepath='./JSBSimRecording.txt.acmi', tacview=None):
+        self.env.render(mode=mode, filepath=filepath, tacview=tacview)
 
 
 def get_config():
@@ -110,14 +173,14 @@ def setup_logging(env_id=0, log_file=None):
 
 # ========== 6. 训练 PPO ==========
 if __name__ == "__main__":
-    num_envs = 1    # 设定 8 个并行环境（根据 GPU 性能调整）
+    num_envs = 1  # 设定 8 个并行环境（根据 GPU 性能调整）
 
-    log_file = "./train/result/train_dodge3.log"
+    log_file = "./train/result/train_shoot_imi.log"
 
     # 创建并行环境
     def make_env(env_id):
         setup_logging(env_id, log_file)
-        return SB3SingleCombatEnv(env_id, config_name='1v1/DodgeMissile/HierarchyVsBaselineSelf')
+        return SB3SingleCombatEnv(env_id, config_name='1v1/ShootMissile/HierarchyVsBaselineSelf')
 
 
     # env = SubprocVecEnv([lambda: make_env(env_id) for env_id in range(num_envs)])
@@ -130,19 +193,18 @@ if __name__ == "__main__":
     )
 
     # 模型路径
-    model_path = "./trained_model/dodge_missile/ppo_air_combat_dodge.zip"
+    model_path = "./trained_model/imitation_shoot/imitation_pretrained.zip"
 
     if os.path.exists(model_path):
         print("✅ 加载已有模型继续训练...")
         model = PPO.load(
             model_path,
             env=env,
-            tensorboard_log="./ppo_air_combat_tb/dodge3/",
+            tensorboard_log="./ppo_air_combat_tb/",
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
     else:
         print("🆕 没有旧模型，重新训练一个新的 PPO 模型")
-        # 创建 PPO 模型
         model = PPO(
             "MlpPolicy",
             env,
@@ -156,26 +218,26 @@ if __name__ == "__main__":
             clip_range=0.2,
             ent_coef=0.02,
             verbose=1,
-            tensorboard_log="./ppo_air_combat_tb/dodge3/",
+            tensorboard_log="./ppo_air_combat_tb/",
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
 
     # 创建 checkpoint 回调，每 10 万步保存一次
     checkpoint_callback = CheckpointCallback(
         save_freq=10_000,  # 每 1*num_env 万步保存一次
-        save_path="./trained_model/dodge_missile_checkpoints3/",  # 保存文件夹
-        name_prefix="ppo_air_combat_dodge"  # 文件名前缀
+        save_path="./trained_model/shoot_missile_checkpoints_imi/",  # 保存文件夹
+        name_prefix="ppo_air_combat_shoot"  # 文件名前缀
     )
 
     # 开始训练，同时记录 TensorBoard 和保存中间模型
     model.learn(
         total_timesteps=3_000_000,
-        tb_log_name="test_dodge2",
+        tb_log_name="test",
         callback=checkpoint_callback
     )
 
     # 最终训练完成后保存一次完整模型
-    model.save("./trained_model/dodge_missile/ppo_air_combat_dodge3")
+    model.save("./trained_model/shoot_missile/ppo_air_combat_imi")
 
     # 关闭环境
     env.close()

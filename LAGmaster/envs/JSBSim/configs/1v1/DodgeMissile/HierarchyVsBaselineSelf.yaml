@@ -2,8 +2,8 @@
 task: hierarchical_singlecombat_dodge_missile
 
 # file path
-render_path: "./render_train/dodge2"
-enm_ver: "pursue_rule"
+render_path: "./render_train/dodge3"
+enm_ver: "shoot_imi"
 
 # simulation config
 sim_freq: 60
@@ -18,7 +18,7 @@ acceleration_limit_z: 10.0
 
 # aircraft config
 use_baseline: true
-baseline_type: shoot_teacher
+baseline_type: shoot_imi
 aircraft_configs: {
   A0100: {
     color: Red,
