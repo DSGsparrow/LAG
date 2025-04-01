@@ -9,7 +9,7 @@ from gym import spaces
 from gym.spaces import MultiDiscrete
 from sklearn.model_selection import train_test_split
 
-from net.net_shoot_imitation import MLPBase, GRULayer, ACTLayer, CustomPolicy
+from net.net_shoot_imitation import MLPBase, GRULayer
 
 
 # 模仿学习策略网络（直接输出连续动作）

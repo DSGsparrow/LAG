@@ -8,3 +8,4 @@ from .shoot_penalty_reward import ShootPenaltyReward
 from .end_altitude_reward import EndAltitudeReward
 from .shoot_gap_penalty_reward import ShootGapPenaltyReward
 from .shoot_event_driven_reward import ShootEventDrivenReward
+from .posture_shoot_reward import PostureShootReward

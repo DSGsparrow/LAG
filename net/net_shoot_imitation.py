@@ -35,39 +35,18 @@ class GRULayer(nn.Module):
         x, _ = self.gru(x)
         return x.squeeze(1)
 
-# ========== 3. ACTLayer（连续输出 5 维） ==========
-class ACTLayer(nn.Module):
-    def __init__(self, input_dim):
-        super(ACTLayer, self).__init__()
-        self.output = nn.Linear(input_dim, 5)  # 输出5维连续动作
-
-    def forward(self, x):
-        raw = self.output(x)
-        # 映射到合法范围（仅在需要时）
-        aileron = torch.tanh(raw[:, 0:1])                 # [-1, 1]
-        elevator = torch.tanh(raw[:, 1:2])                # [-1, 1]
-        rudder = torch.tanh(raw[:, 2:3])                  # [-1, 1]
-        throttle = torch.sigmoid(raw[:, 3:4]) * 0.5 + 0.4 # [0.4, 0.9]
-        shoot = torch.sigmoid(raw[:, 4:5])                # [0, 1]
-        return torch.cat([aileron, elevator, rudder, throttle, shoot], dim=-1)
 
 # ========== 4. CustomPolicy ==========
-class CustomPolicy(BaseFeaturesExtractor):
+class CustomImitationPolicy(BaseFeaturesExtractor):
     def __init__(self, observation_space: spaces.Box):
-        super(CustomPolicy, self).__init__(observation_space, features_dim=128)
+        super(CustomImitationPolicy, self).__init__(observation_space, features_dim=128)
         input_dim = observation_space.shape[0]
         hidden_dim = 128
 
         self.feature_extractor = MLPBase(input_dim, hidden_dim)
-        self.gru_layer = GRULayer(hidden_dim, hidden_dim)
-        self.act_layer = ACTLayer(hidden_dim)  # 不再需要 action_dim 参数
+        self.gru = GRULayer(hidden_dim, hidden_dim)
 
     def forward(self, x):
         features = self.feature_extractor(x)
-        features = self.gru_layer(features)
+        features = self.gru(features)
         return features  # 给 SB3 用于 actor 和 critic 分别处理
-
-    def get_action(self, x):
-        # 如果你想在外部直接取动作
-        features = self.forward(x)
-        return self.act_layer(features)

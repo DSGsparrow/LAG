@@ -10,7 +10,9 @@ train_dodge_missile.py
 + 基于**规则**来发射
 + 也可以计算命中率
 
-## 
+## 网络
+net_shoot_missile.py
+CustomPolicy
 
 
 # train: dodge missile

@@ -13,7 +13,8 @@ from utils.init_state import my_aircraft, calculate_enemy_position
 
 from .env_base import BaseEnv
 from ..tasks import SingleCombatTask, SingleCombatDodgeMissileTask, HierarchicalSingleCombatDodgeMissileTask, \
-    HierarchicalSingleCombatShootTask, SingleCombatShootMissileTask, HierarchicalSingleCombatTask
+    HierarchicalSingleCombatShootTask, SingleCombatShootMissileTask, HierarchicalSingleCombatTask, \
+    SingleCombatShootMissileImitationTask
 from ..human_task.HumanSingleCombatTask import  HumanSingleCombatTask
 
 
@@ -133,6 +134,8 @@ class SingleCombatEnvShoot(BaseEnv):
             self.task = HierarchicalSingleCombatShootTask(self.config)
         elif taskname == 'HumanSingleCombat':
             self.task = HumanSingleCombatTask(self.config)
+        elif taskname == 'singlecombat_shoot_imitation':
+            self.task = SingleCombatShootMissileImitationTask(self.config)
         else:
             raise NotImplementedError(f"Unknown taskname: {taskname}")
 

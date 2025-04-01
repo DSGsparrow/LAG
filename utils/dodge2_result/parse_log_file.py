@@ -5,8 +5,8 @@ import ast
 from collections import deque, defaultdict
 
 # ✅ 你的路径配置
-log_path = "train/result/train_dodge2.log"
-output_dir = "test_result/dodge2"
+log_path = "train/result/train_shoot_imi.log"
+output_dir = "test_result/shoot_imi"
 os.makedirs(output_dir, exist_ok=True)
 
 with open(log_path, "r", encoding="utf-8") as f:
@@ -51,10 +51,11 @@ def safe_parse_result(block):
             return None
 
 for idx, line in enumerate(lines):
-    pid_match = re.search(r"\[PID (\d+)\]", line)
+    pid_match = re.search(r"\[ENV (\d+)\]", line)
     if not pid_match:
         continue
     pid = int(pid_match.group(1))
+    pid_buffer[pid]["env_id"] = pid
 
     # ✅ 提取 acmi 文件和 env_id
     if "render txt name:" in line:
@@ -66,21 +67,26 @@ for idx, line in enumerate(lines):
             pid_buffer[pid]["env_id"] = env_id
 
     # ✅ 提取发射信息（多行）
-    if "B0100 launch mission!" in line:
+    if "A0100 launch mission!" in line:
         block = line
         for j in range(1, 10):
             if idx + j < len(lines):
                 block += lines[idx + j]
             if "current_reward=" in block:
                 break
-        match = re.search(r"obs=\[(.*?)\].*?state=\[(.*?)\].*?current_reward=([-\d.eE]+)", block, re.DOTALL)
-        if match:
-            obs = list(map(float, re.split(r'\s+', match.group(1).strip())))
-            state = list(map(float, re.split(r'\s+', match.group(2).strip())))
-            reward = float(match.group(3))
-            pid_buffer[pid]["launch_obs"] = obs
-            pid_buffer[pid]["launch_state"] = state
-            pid_buffer[pid]["reward_at_launch"] = reward
+        if "obs=" in line and "state=" in line and "current_reward=" in line:
+        #     match = True
+        # else:
+        #     match = False
+        # match = re.search(r"obs=\[(.*?)\].*?state=\[(.*?)\].*?current_reward=([-\d.eE]+)", block, re.DOTALL)
+        # if match:
+            obs_match = re.search(r"obs=\[(.*?)\]", line)
+            state_match = re.search(r"state=\[(.*?)\]", line)
+            reward_match = re.search(r"current_reward=([-\d\.eE]+)", line)
+
+            obs = ast.literal_eval("[" + obs_match.group(1) + "]") if obs_match else None
+            state = ast.literal_eval("[" + state_match.group(1) + "]") if state_match else None
+            reward = float(reward_match.group(1)) if reward_match else None
 
     # ✅ 提取 render_result（多行）
     if "render_result:" in line:

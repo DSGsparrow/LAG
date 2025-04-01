@@ -14,7 +14,7 @@ import os
 import logging
 
 from LAGmaster.envs.JSBSim.envs import SingleCombatEnv, SingleControlEnv, SingleCombatEnvShoot
-from net.net_shoot_imitation import CustomPolicy
+from net import CustomImitationPolicy
 
 # ========== 1. 适配 SB3 的自定义环境 ==========
 class SB3SingleCombatEnv(gymnasium.Env):
@@ -172,34 +172,34 @@ def setup_logging(env_id=0, log_file=None):
 
 
 # ========== 6. 训练 PPO ==========
+# =================== 训练主程序 ===================
 if __name__ == "__main__":
-    num_envs = 1  # 设定 8 个并行环境（根据 GPU 性能调整）
+    # 参数
+    num_envs = 16
+    log_file = "./train/result/train_shoot_imi2.log"
+    model_path = ''  # "./trained_model/imitation_shoot/imitation_pretrained.zip"
+    pretrained_pt_path = "./trained_model/imitation_shoot/imitation_pretrained_pytorch.pt"
 
-    log_file = "./train/result/train_shoot_imi.log"
-
-    # 创建并行环境
+    # 多进程环境创建
     def make_env(env_id):
         setup_logging(env_id, log_file)
-        return SB3SingleCombatEnv(env_id, config_name='1v1/ShootMissile/HierarchyVsBaselineSelf')
+        return SB3SingleCombatEnv(env_id, config_name='1v1/ShootMissile/HierarchyVsBaselineImitation')
 
+    env = SubprocVecEnv([lambda env_id=i: make_env(env_id) for i in range(num_envs)])
 
-    # env = SubprocVecEnv([lambda: make_env(env_id) for env_id in range(num_envs)])
-    env = SubprocVecEnv([lambda env_id=env_id: make_env(env_id) for env_id in range(num_envs)])
-
-    # 定义 PPO 模型（自定义 MLP 作为特征提取器）
+    # 定义 PPO 模型（指定自定义特征提取器）
     policy_kwargs = dict(
-        features_extractor_class=CustomPolicy,
-        features_extractor_kwargs=dict(action_dim=env.action_space)
+        features_extractor_class=CustomImitationPolicy,
+        features_extractor_kwargs={}
     )
 
-    # 模型路径
-    model_path = "./trained_model/imitation_shoot/imitation_pretrained.zip"
-
+    # 如果已有模型，加载继续训练；否则新建
     if os.path.exists(model_path):
         print("✅ 加载已有模型继续训练...")
         model = PPO.load(
             model_path,
             env=env,
+            policy_kwargs=policy_kwargs,
             tensorboard_log="./ppo_air_combat_tb/",
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
@@ -222,22 +222,60 @@ if __name__ == "__main__":
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
 
-    # 创建 checkpoint 回调，每 10 万步保存一次
+        # 如果存在预训练 PyTorch 模型，加载其中部分参数
+        if os.path.exists(pretrained_pt_path):
+            print("🔄 正在加载模仿学习预训练参数...")
+            pretrained_dict = torch.load(pretrained_pt_path, map_location="cpu")
+            extractor = model.policy.features_extractor
+            current_dict = extractor.state_dict()
+            matched_dict = {k: v for k, v in pretrained_dict.items() if k in current_dict}
+            current_dict.update(matched_dict)
+            extractor.load_state_dict(current_dict)
+            print("✅ 成功加载预训练特征提取器参数！")
+            print("匹配的参数：", [k for k in pretrained_dict.keys() if k in current_dict])
+            print("未匹配的参数：", [k for k in pretrained_dict.keys() if k not in current_dict])
+
+    # 检查点回调
     checkpoint_callback = CheckpointCallback(
-        save_freq=10_000,  # 每 1*num_env 万步保存一次
-        save_path="./trained_model/shoot_missile_checkpoints_imi/",  # 保存文件夹
-        name_prefix="ppo_air_combat_shoot"  # 文件名前缀
+        save_freq=10_000,
+        save_path="./trained_model/shoot_missile_checkpoints_imi/",
+        name_prefix="ppo_air_combat_shoot"
     )
 
-    # 开始训练，同时记录 TensorBoard 和保存中间模型
+    # 冻结特征提取器参数
+    for param in model.policy.features_extractor.parameters():
+        param.requires_grad = False
+
+    # 重新设置优化器（只训练 requires_grad=True 的参数）
+    model.policy.optimizer = torch.optim.Adam(
+        filter(lambda p: p.requires_grad, model.policy.parameters()),
+        lr=3e-4
+    )
+
+    # 训练阶段1：只训练线性层
     model.learn(
-        total_timesteps=3_000_000,
-        tb_log_name="test",
+        total_timesteps=1_000_000,  # 可调整冻结期
+        tb_log_name="frozen_feature",
         callback=checkpoint_callback
     )
 
-    # 最终训练完成后保存一次完整模型
-    model.save("./trained_model/shoot_missile/ppo_air_combat_imi")
+    # 解冻所有参数
+    for param in model.policy.features_extractor.parameters():
+        param.requires_grad = True
 
-    # 关闭环境
+    # 重新设置优化器（训练所有参数）
+    model.policy.optimizer = torch.optim.Adam(
+        model.policy.parameters(),
+        lr=3e-4
+    )
+
+    # 训练阶段2：正常训练
+    model.learn(
+        total_timesteps=2_000_000,  # 剩余训练步数
+        tb_log_name="full_train",
+        callback=checkpoint_callback
+    )
+
+    # 保存最终模型
+    model.save("./trained_model/shoot_imitation/ppo_air_combat_imi")
     env.close()

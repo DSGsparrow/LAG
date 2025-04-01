@@ -57,7 +57,7 @@ class ShootPenaltyReward(BaseRewardFunction):
 
                 if distance <= self.shoot_distance_center:
                     # 高斯函数下降慢一点：sigma 调大
-                    bonus = np.exp(-((distance - self.shoot_distance_center) ** 2) / (2 * self.shoot_distance_sigma ** 2))
+                    bonus = 1  # np.exp(-((distance - self.shoot_distance_center) ** 2) / (2 * self.shoot_distance_sigma ** 2))
                 else:  # if distance <= 10000:
                     # 线性递减：从 1 到 -1
                     ratio = (distance - self.shoot_distance_center) / (10000 - self.shoot_distance_center)  # 0 到 1

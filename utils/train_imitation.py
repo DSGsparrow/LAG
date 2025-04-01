@@ -74,40 +74,40 @@ def train_imitation_and_export(data_dir, env, zip_path="imitation_pretrained.zip
     best_val_loss = float('inf')
     patience_counter = 0
 
-    # for epoch in range(100):  # 最多训练 100 轮
-    #     imit_model.train()
-    #     total_loss = 0
-    #     for obs_batch, act_batch in train_loader:
-    #         pred = imit_model(obs_batch)
-    #         loss = loss_fn(pred, act_batch)
-    #         optim.zero_grad()
-    #         loss.backward()
-    #         optim.step()
-    #         total_loss += loss.item() * obs_batch.size(0)
-    #     train_loss = total_loss / len(train_dataset)
-    #
-    #     # 验证集 loss
-    #     imit_model.eval()
-    #     with torch.no_grad():
-    #         val_loss = 0
-    #         for obs_batch, act_batch in val_loader:
-    #             pred = imit_model(obs_batch)
-    #             loss = loss_fn(pred, act_batch)
-    #             val_loss += loss.item() * obs_batch.size(0)
-    #         val_loss = val_loss / len(val_dataset)
-    #
-    #     print(f"[Epoch {epoch + 1}] Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
-    #
-    #     # Early stopping
-    #     if val_loss < best_val_loss:
-    #         best_val_loss = val_loss
-    #         patience_counter = 0
-    #         best_model_sd = imit_model.state_dict()
-    #     else:
-    #         patience_counter += 1
-    #         if patience_counter >= patience:
-    #             print(f"⏹️ 早停触发：验证集 {patience} 次未提升，提前停止训练")
-    #             break
+    for epoch in range(100):  # 最多训练 100 轮
+        imit_model.train()
+        total_loss = 0
+        for obs_batch, act_batch in train_loader:
+            pred = imit_model(obs_batch)
+            loss = loss_fn(pred, act_batch)
+            optim.zero_grad()
+            loss.backward()
+            optim.step()
+            total_loss += loss.item() * obs_batch.size(0)
+        train_loss = total_loss / len(train_dataset)
+
+        # 验证集 loss
+        imit_model.eval()
+        with torch.no_grad():
+            val_loss = 0
+            for obs_batch, act_batch in val_loader:
+                pred = imit_model(obs_batch)
+                loss = loss_fn(pred, act_batch)
+                val_loss += loss.item() * obs_batch.size(0)
+            val_loss = val_loss / len(val_dataset)
+
+        print(f"[Epoch {epoch + 1}] Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
+
+        # Early stopping
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            patience_counter = 0
+            best_model_sd = imit_model.state_dict()
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print(f"⏹️ 早停触发：验证集 {patience} 次未提升，提前停止训练")
+                break
 
     best_model_sd = torch.load('imitation_pretrained_pytorch.pt')
 

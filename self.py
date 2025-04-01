@@ -1,18 +1,33 @@
-import matplotlib.pyplot as plt
 import numpy as np
-import torch
+import matplotlib.pyplot as plt
 
-from utils.situation_evaluator import SituationNet,predict_situation
+# 1 * (R < 5) + (R >= 5) * np.clip(-0.032 * R**2 + 0.284 * R + 0.38, 0, 1) + np.clip(np.exp(-0.16 * R), 0, 0.2)
 
-# **测试预测**
-test_input = {
-    "distance": 8000.0, "angle": 0.0, "alt": 1111.1111111111095, "speed": 928.5714285714286,
-    # "success": True,
-    # "reward": 820.314,
-    # "total_steps": 300
-}
+def speed_reward(distance):
+    reward = 0
+    if distance > 10000:
+        # 太远
+        reward -= 1
+    elif distance <= 10000:
 
-model_path = "trained_model/shoot_prediction/situation_model2.pth"
-scaler_path = "trained_model/shoot_prediction/scaler2.npy"
-predicted_score = predict_situation(test_input, model_path, scaler_path)
-print(f"预测态势评分: {predicted_score:.4f}")
+        if distance <= 9000:
+            # 高斯函数下降慢一点：sigma 调大
+            bonus = np.exp(-((distance - 9000) ** 2) / (2 * 1000 ** 2))
+        else:  # if distance <= 10000:
+            # 线性递减：从 1 到 -1
+            ratio = (distance - 9000) / (10000 - 9000)  # 0 到 1
+            bonus = 1 - 2 * ratio
+
+        reward += 1 * bonus
+
+
+
+vs = np.linspace(6000, 11000, 500)
+rs = [speed_reward(v) for v in vs]
+
+plt.plot(vs, rs)
+plt.title("Speed Reward Curve")
+plt.xlabel("Speed (mh)")
+plt.ylabel("Reward")
+plt.grid(True)
+plt.show()

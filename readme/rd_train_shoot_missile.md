@@ -1,8 +1,59 @@
+# train: shoot imitation2
+log: shoot_imi2.log  
+render: shoot_imi2  
+目前有点奇怪的点在于，命名看起来没学到东西，但不知道为什么命中率大幅提升了
+
+前面四个shoot命中率大概是6%，20%， 20%， 18%  
+而这次的命中还真高到47%了？  
+
+然后dodge的命中率大概是34% 31% dodge dodge2  
+
+就很奇怪，明明也没有控制，还是上来就打弹，  
+因此怀疑是躲弹的不行了，会不会是针对近距离躲弹导致过拟合，结果无法面对原来的打弹了？  
+于是再次训练
+
+
+# train: shoot imitation
+log: shoot_imi.log  
+render: shoot3  
+目前来看，模仿学习的效果不错，毕竟是完全按照复制来的，基本上是完全一样了，  
+不过也是进不来，起码解决了发射难以学习的问题  
+然后就是把模仿的智能体用来训练吧  
+
+目前的考虑：
++ 用最新的逃逸智能体
++ 打弹后没有奖励，只用最终打弹加入奖励
++ 前面就是对准和接近和高度和加速的奖励
++ 打弹时的奖励
++ 关键是看在训练后能不能稳定策略或者有更好的？
++ 不能出现打弹混乱
++ PPO自带线性头可能会有影响？不太清楚具体原理
++ 然后优化：
+  + 考虑敌方姿态
+  + 提高命中率？
+  + 之前是30大概
+
+## task 
+设计了新的task  
+singlecombat_task_imitation.py 中 SingleCombatShootMissileImitationTask  
+动作空间是5维的-1到1的连续box  
+然后要对动作进行处理，之后得到杆量和发射判断
+
+敌方dodgemissileAgent，加入了序号，用dodge2
+
+终止同HierarchicalSingleCombatShootMissile
+
+奖励加入了速度，才发现posture是乘的关系  
+其他同HierarchicalSingleCombatShootMissile  
+而且都是发弹前才有，发弹后只有发弹奖励和击中奖励
+
+
 # train: shoot missile 4
 加入use-prior  
 实在是没办法了  
 希望这个会有更好的表现  
 其实也有缺陷，很容易出现打弹重叠，不过这个应该目前不用担心
+仍然很弱，决定使用模仿学习
 
 
 
