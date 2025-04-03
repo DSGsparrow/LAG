@@ -12,8 +12,9 @@ def count_render_results(file_path):
         for line in f:
             if "render_result:" in line:
                 total += 1
-            if "A0100 has been shot down!" in line or 'success": True' in line:
-                success_true += 1
+            # if "A0100 has been shot down!" in line or 'success": True' in line or "success': True" in line :
+                if 'success": True' in line or "success': True" in line :
+                    success_true += 1
 
     print(f"📦 render_result 总次数: {total}")
     print(f"✅ success=True 次数: {success_true}")
@@ -24,7 +25,7 @@ def count_render_results(file_path):
         print("⚠️ 没有找到 render_result 行")
 
 # 使用示例
-log_file_path = "train/result/train_dodge.log"  # 替换成你的日志路径
+log_file_path = "train/result/train_shoot_imi2.log"  # 替换成你的日志路径
 count_render_results(log_file_path)
 
 

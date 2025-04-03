@@ -5,8 +5,8 @@ import ast
 from collections import deque, defaultdict
 
 # ✅ 你的路径配置
-log_path = "train/result/train_shoot_imi.log"
-output_dir = "test_result/shoot_imi"
+log_path = "train/result/train_shoot_imi2.log"
+output_dir = "test_result/shoot_imi2"
 os.makedirs(output_dir, exist_ok=True)
 
 with open(log_path, "r", encoding="utf-8") as f:

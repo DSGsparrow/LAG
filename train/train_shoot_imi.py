@@ -176,7 +176,7 @@ def setup_logging(env_id=0, log_file=None):
 if __name__ == "__main__":
     # 参数
     num_envs = 16
-    log_file = "./train/result/train_shoot_imi2.log"
+    log_file = "./train/result/train_shoot_imi.log"
     model_path = ''  # "./trained_model/imitation_shoot/imitation_pretrained.zip"
     pretrained_pt_path = "./trained_model/imitation_shoot/imitation_pretrained_pytorch.pt"
 

@@ -1,3 +1,7 @@
+# train: shoot5
+这必须得拿之前的再跑一次了，如果没问题我服了，72%的命中率？
+
+
 # train: shoot imitation2
 log: shoot_imi2.log  
 render: shoot_imi2  
@@ -5,8 +9,14 @@ render: shoot_imi2
 
 前面四个shoot命中率大概是6%，20%， 20%， 18%  
 而这次的命中还真高到47%了？  
+用之前的躲弹dodge命中率有64%？最后100回合命中率72%  
+这都怎么做到的？
+命中率真提高了，提到了非常多？  
 
-然后dodge的命中率大概是34% 31% dodge dodge2  
+这就有点奇怪了，为什么命中率会提升呢？  
+
+
+然后dodge的命中率大概是34% 31% dodge dodge2（纯规则）  
 
 就很奇怪，明明也没有控制，还是上来就打弹，  
 因此怀疑是躲弹的不行了，会不会是针对近距离躲弹导致过拟合，结果无法面对原来的打弹了？  
@@ -15,10 +25,12 @@ render: shoot_imi2
 
 # train: shoot imitation
 log: shoot_imi.log  
-render: shoot3  
+render: shoot3 的后半部分，31号到1号
+用从规则模仿学习到的智能体(ppo from .pt)去打用规则训练出来的智能体(dodge2)  
 目前来看，模仿学习的效果不错，毕竟是完全按照复制来的，基本上是完全一样了，  
 不过也是进不来，起码解决了发射难以学习的问题  
 然后就是把模仿的智能体用来训练吧  
+命中率47%  
 
 目前的考虑：
 + 用最新的逃逸智能体
@@ -49,6 +61,7 @@ singlecombat_task_imitation.py 中 SingleCombatShootMissileImitationTask
 
 
 # train: shoot missile 4
+render shoot3 26号中午  
 加入use-prior  
 实在是没办法了  
 希望这个会有更好的表现  
@@ -59,6 +72,7 @@ singlecombat_task_imitation.py 中 SingleCombatShootMissileImitationTask
 
 
 # train:shoot missile 3
+render shoot3 25号中午  
 ## 智能体
 敌方dodge1 自己shoot2
 
