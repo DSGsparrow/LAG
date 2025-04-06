@@ -7,7 +7,7 @@ from argparse import Namespace
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
-from adapter.adapter_shoot_missile import SB3SingleCombatEnv
+from adapter.adapter_shoot_back import SB3SingleCombatEnv
 from net.net_shoot_imitation import CustomImitationPolicy, MLPBase, GRULayer
 
 
@@ -175,31 +175,31 @@ if __name__ == "__main__":
     # 1, change args: model path, config name, output_dir
     # 2, yaml: render path, baselines
     args3 = Namespace(
-        config_name='1v1/ShootMissile/HierarchyVsBaselineImitation',
-        model_path='./trained_model/shoot_imitation/ppo_air_combat_imi.zip',
-        log_file='./test_result/log/test_shoot_imi_vs_dodge2.log',
-        num_envs=16,
-        max_steps=50_001,
-    )
-    main(args3)
-
-
-    # 调用第一个模型（模仿学习 .pt）
-    args1 = Namespace(
-        config_name='1v1/ShootMissile/HierarchyVsBaselineImitationOrigin',
+        config_name='1v1/ShootMissile/HierarchyVsBaselineShootBack',
         model_path='./trained_model/imitation_shoot/imitation_pretrained_pytorch.pt',
-        log_file='./test_result/log/test_shoot_imi_origin_vs_dodge2.log',
-        num_envs=16,
+        log_file='./test_result/log/test_shoot_imi_back_vs_dodge2.log',
+        num_envs=1,
         max_steps=50_001,
     )
-    main_origin_imitation_vs_dodge(args1)
+    main_origin_imitation_vs_dodge(args3)
 
-    # 调用第二个模型（PPO .zip）
-    args2 = Namespace(
-        config_name='1v1/ShootMissile/HierarchyVsBaselineSelf',
-        model_path='./trained_model/shoot_missile/ppo_air_combat_3.zip',
-        log_file='./test_result/log/test_shoot3_vs_dodge2.log',
-        num_envs=16,
-        max_steps=50_001
-    )
-    main(args2)
+
+    # # 调用第一个模型（模仿学习 .pt）
+    # args1 = Namespace(
+    #     config_name='1v1/ShootMissile/HierarchyVsBaselineImitationOrigin',
+    #     model_path='./trained_model/imitation_shoot/imitation_pretrained_pytorch.pt',
+    #     log_file='./test_result/log/test_shoot_imi_origin_vs_dodge2.log',
+    #     num_envs=16,
+    #     max_steps=50_001,
+    # )
+    # main_origin_imitation_vs_dodge(args1)
+    #
+    # # 调用第二个模型（PPO .zip）
+    # args2 = Namespace(
+    #     config_name='1v1/ShootMissile/HierarchyVsBaselineSelf',
+    #     model_path='./trained_model/shoot_missile/ppo_air_combat_3.zip',
+    #     log_file='./test_result/log/test_shoot3_vs_dodge2.log',
+    #     num_envs=16,
+    #     max_steps=50_001
+    # )
+    # main(args2)

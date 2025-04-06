@@ -135,21 +135,44 @@ class ManeuverAgent(BaselineAgent):
             delta_altitude = 6000 - env.agents[uid].get_property_value(c.position_h_sl_m)
             delta_velocity = 243 - env.agents[uid].get_property_value(c.velocities_u_mps)
 
-        return np.array([delta_altitude, delta_heading, delta_velocity])
+        delta_value = np.array([delta_altitude, delta_heading, delta_velocity])
+
+        delta_velocity = 243 - env.agents[uid].get_property_value(c.velocities_u_mps)
+        delta_heading = self.init_heading - cur_heading
+
+        delta_value = np.array([100, delta_heading, delta_velocity])
+
+        return delta_value
 
 
-def test_maneuver():
+def maneuver():
     env = SingleCombatEnv(config_name='1v1/NoWeapon/test/opposite')
     obs = env.reset()
     env.render(filepath="control.txt.acmi")
-    agent0 = ManeuverAgent(agent_id=0, maneuver='n')
+    agent0 = ManeuverAgent(agent_id=0, maneuver='l')
     agent1 = PursueAgent(agent_id=1)
     reward_list = []
+    vs = []
+    alts = []
+    speed_actions = []
     while True:
         action0 = agent0.get_action(env, env.task)
+
+        speed_action = action0[3] / 58 + 0.4
+        speed_actions.append(speed_action)
+
         action1 = agent1.get_action(env, env.task)
         actions = [action0, action1]
         obs, reward, done, info = env.step(actions)
+
+        alt = obs[0][0] * 5000
+        alts.append(alt)
+        vx = obs[0][5]
+        vy = obs[0][6]
+        vz = obs[0][7]
+        v = np.linalg.norm([vx, vy, vz]) * 340
+        vs.append(v)
+
         env.render(filepath="control.txt.acmi")
         reward_list.append(reward[0])
         if np.array(done).all():
@@ -157,7 +180,13 @@ def test_maneuver():
             break
     # plt.plot(reward_list)
     # plt.savefig('rewards.png')
+    plt.plot(vs)
+    plt.show()
+    plt.plot(speed_actions)
+    plt.show()
+    plt.plot(alts)
+    plt.show()
 
 
 if __name__ == '__main__':
-    test_maneuver()
+    maneuver()
