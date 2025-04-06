@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 
 from net.net_shoot_imitation import MLPBase, GRULayer
 
-
+# 单纯模仿学习的网络
 # 模仿学习策略网络（直接输出连续动作）
 class ImitationPolicy(nn.Module):
     def __init__(self, obs_dim):

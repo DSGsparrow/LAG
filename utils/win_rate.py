@@ -25,7 +25,7 @@ def count_render_results(file_path):
         print("⚠️ 没有找到 render_result 行")
 
 # 使用示例
-log_file_path = "train/result/train_shoot_imi2.log"  # 替换成你的日志路径
+log_file_path = "test_result/log/test_shoot_imi_vs_dodge.log"  # 替换成你的日志路径
 count_render_results(log_file_path)
 
 

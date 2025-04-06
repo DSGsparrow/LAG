@@ -2,7 +2,7 @@
 task: singlecombat_shoot_imitation
 
 # file path
-render_path: "./render_train/shoot_imi2"
+render_path: "./test_result/render/shoot_imi_vs_dodge2"
 
 # shoot area
 shoot_distance_center: 7000
@@ -23,7 +23,7 @@ acceleration_limit_z: 10.0
 
 # aircraft config
 use_baseline: true
-baseline_type: dodge
+baseline_type: dodge2
 aircraft_configs: {
   A0100: {
     color: Red,

@@ -1,8 +1,8 @@
 # task config
-task: singlecombat_shoot
+task: hierarchical_singlecombat_shoot
 
 # file path
-render_path: "./render_train/shoot3"
+render_path: "./test_result/render/shoot3_vs_dodge2"
 
 # shoot area
 shoot_distance_center: 7000
@@ -23,7 +23,7 @@ acceleration_limit_z: 10.0
 
 # aircraft config
 use_baseline: true
-baseline_type: dodge_self
+baseline_type: dodge2
 aircraft_configs: {
   A0100: {
     color: Red,

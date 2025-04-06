@@ -594,15 +594,17 @@ class DodgeMissileAgent:
         norm_act[3] = action[3] / 58 + 0.4
         return norm_act
 
-    def get_action(self, sim: AircraftSimulator):
+    def get_action(self, env, agent_id):
+        sim = env.agents[agent_id]
         obs = self.get_observation(sim)
         # _action, self.rnn_states = self.actor(obs, self.rnn_states)
         # action = _action.squeeze().detach().cpu().numpy().squeeze()
 
         action, _ = self.model.predict(obs, deterministic=True)
         # action = _action.squeeze().detach().cpu().numpy().squeeze()
+        norm_action = self.normalize_action(env, agent_id, action)
 
-        return action
+        return norm_action
 
     def reset(self):
         self.rnn_states = np.zeros((1, 1, 128))

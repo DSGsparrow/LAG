@@ -1,6 +1,7 @@
 import gymnasium
 from gymnasium import spaces
 import numpy as np
+import logging
 
 from LAGmaster.envs.JSBSim.envs import SingleCombatEnv, SingleControlEnv, SingleCombatEnvShoot
 
@@ -16,6 +17,8 @@ class SB3SingleCombatEnv(gymnasium.Env):
         # act_shape = self.env.get_action_space().shape[0]  # 获取动作空间维度
         # 继承原始环境的动作空间和观察空间
         # self.action_space = self.env.action_space
+        self.episode_num = 0
+        self.win_num = 0
 
         # 提取原始环境的 action_space
         if isinstance(self.env.action_space, spaces.Tuple):
@@ -32,10 +35,8 @@ class SB3SingleCombatEnv(gymnasium.Env):
             # 转换为 MultiDiscrete
             self.action_space = spaces.MultiDiscrete(action_dims)
         else:
-            if isinstance(self.env.action_space, spaces.MultiDiscrete):
-                self.action_space = self.env.action_space
-            else:
-                raise ValueError("Unexpected action space type: {}".format(type(self.env.action_space)))
+            # raise ValueError("Unexpected action space type: {}".format(type(self.env.action_space)))
+            self.action_space = self.env.action_space
 
         self.observation_space = self.env.observation_space
 
@@ -58,6 +59,13 @@ class SB3SingleCombatEnv(gymnasium.Env):
         observation, reward, terminated, truncated, info = obs[0], rewards.item(), dones.item(), timeout, info
 
         # logging.info('test')
+        if terminated or truncated:
+            self.episode_num += 1
+            shoot_success = info.get("shoot success", False)
+            if shoot_success:
+                self.win_num += 1
+            logging.info(
+                f'test {self.episode_num} episode, shoot down enemy {self.win_num} times, win rate is{self.win_num / self.episode_num * 100}%')
 
         return observation, reward, terminated, truncated, info
 

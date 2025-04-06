@@ -3,6 +3,7 @@ import torch.nn as nn
 from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
+# PPO 调用 .pt 的网络模型
 # ========== 1. MLPBase（特征提取） ==========
 class MLPBase(nn.Module):
     def __init__(self, input_dim, hidden_dim):

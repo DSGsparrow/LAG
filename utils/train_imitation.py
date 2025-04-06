@@ -9,7 +9,7 @@ from gym import spaces
 from gym.spaces import MultiDiscrete
 from sklearn.model_selection import train_test_split
 
-from net.net_shoot_imitation import MLPBase, GRULayer, ACTLayer, CustomPolicy
+from net.net_shoot_imitation import MLPBase, GRULayer
 from adapter.adapter_dodge_missile import SB3SingleCombatEnv
 
 

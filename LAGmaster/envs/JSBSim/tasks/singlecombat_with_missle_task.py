@@ -373,24 +373,12 @@ class HierarchicalSingleCombatShootTask(HierarchicalSingleCombatTask, SingleComb
 
             else:
                 # 用dodge无需加工
-                action = self.baseline_agent.get_action(env.agents[agent_id])
+                action = self.baseline_agent.get_action(env, agent_id)
 
                 return action
 
         else:
             self._shoot_action[agent_id] = action[-1]
-
-            # prior
-            # obs = self.get_obs(env, agent_id)
-            # ego_AO = obs[11] / np.pi * 180
-            # ego_TA = obs[12] / np.pi * 180
-            # distance = obs[13]
-
-            # if distance > 1:  # 距离超过10公里
-            #     self._shoot_action[agent_id] = 0
-            #
-            # elif ego_AO > 50.:  # 视线角过大不可以打弹
-            #     self._shoot_action[agent_id] = 0
 
             return HierarchicalSingleCombatTask.normalize_action(self, env, agent_id, action[:-1].astype(np.int32))
 

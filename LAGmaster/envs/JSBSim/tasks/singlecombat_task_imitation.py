@@ -52,9 +52,9 @@ class SingleCombatShootMissileImitationTask(SingleCombatDodgeMissileTask):
     def normalize_action(self, env, agent_id, action):
         if self.use_baseline and agent_id in env.enm_ids:
             # 敌方智能体：DodgeMissileAgent 调用的自己SB3上训练的PPO
-            action = self.baseline_agent.get_action(env.agents[agent_id])
+            norm_action = self.baseline_agent.get_action(env, agent_id)
             # np.ndarray(4,)
-            norm_action = self.baseline_agent.normalize_action(env, agent_id, action)
+            # norm_action = self.baseline_agent.normalize_action(env, agent_id, action)
             # norm_action = action[:-1]
             # 4位杆量，可以直接传
             # self._shoot_action[agent_id] = action[-1]
