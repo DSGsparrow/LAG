@@ -42,8 +42,8 @@ class CustomImitationShootBackPolicy(BaseFeaturesExtractor):
         super().__init__(observation_space, features_dim)
         obs_dim = observation_space.shape[0]
         self.mlp = MLPBase(obs_dim, 128)
-        self.gru = GRULayer(128, 128)
-        self.output_dim = 128  # 最终输出维度
+        self.gru = GRULayer(128, features_dim)
+        self.output_dim = features_dim  # 最终输出维度
 
     def forward(self, obs):
         x = self.mlp(obs)
@@ -55,11 +55,12 @@ class CustomActorCriticShootBackPolicy(ActorCriticPolicy):
         super().__init__(*args, **kwargs)
 
         # 替换特征提取器为我们的网络
-        self.features_extractor = CustomImitationShootBackPolicy(self.observation_space)
+        # self.features_extractor = CustomImitationShootBackPolicy(self.observation_space)
 
         # 自定义 actor 和 critic head
-        self.action_net = nn.Linear(self.features_extractor.output_dim, self.action_space.shape[0])
-        self.value_net = nn.Linear(self.features_extractor.output_dim, 1)
+        latent_dim = self.features_extractor.output_dim
+        self.action_net = nn.Linear(latent_dim, self.action_space.shape[0])
+        self.value_net = nn.Linear(latent_dim, 1)
 
         # 连续动作用到的 log_std
         self.log_std = nn.Parameter(torch.zeros(1, self.action_space.shape[0]))

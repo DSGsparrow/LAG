@@ -1,8 +1,8 @@
 # task config
-task: singlecombat_shoot_back
+task: hierarchical_singlecombat_shoot_back
 
 # file path
-render_path: "./render_train/shoot_back"
+render_path: "./render_train/shoot_back2_gail3"
 state_path: "./test_result/result/states_imi_dodge2.jsonl"
 
 # shoot area
@@ -24,7 +24,7 @@ acceleration_limit_z: 10.0
 
 # aircraft config
 use_baseline: true
-baseline_type: dodge2
+baseline_type: dodge4
 aircraft_configs: {
   A0100: {
     color: Red,
@@ -74,7 +74,7 @@ AltitudeReward_Kv: 0.2
 EventDrivenReward_scale: 1
 EventDrivenReward_potential: true
 
-ShootPenaltyReward_scale: 10
+ShootPenaltyReward_scale: 5
 
 RelativeAltitudeReward_scale: 3
 RelativeAltitudeReward_potential: true

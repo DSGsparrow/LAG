@@ -1042,8 +1042,8 @@ class ShootAgent:
 class ShootTeacherAgent(BaselineAgent):
     def __init__(self) -> None:
         super().__init__()
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.situation_predict_model = SituationNet().to(device)
+        # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.situation_predict_model = SituationNet().to(device)
 
         self.state_var2 = [
             c.position_long_gc_deg,  # 0. lontitude  (unit: °)
@@ -1128,21 +1128,21 @@ class ShootTeacherAgent(BaselineAgent):
         self.rnn_states = np.zeros((1, 1, 128))
 
         # 回合结束，保存当前 trajectory
-        if self.trajectory:
-            obs_arr = np.array([pair[0] for pair in self.trajectory])
-            action_arr = np.array([pair[1] for pair in self.trajectory])
-
-            # 自动生成文件名
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            unique_id = uuid.uuid4().hex[:6]  # 6位短 UUID
-            filename = f"expert_ep_{timestamp}_{unique_id}.npz"
-            path = os.path.join(self.save_dir, filename)
-            np.savez_compressed(path, obs=obs_arr, action=action_arr)
-
-            # print(f"[Saved] Episode {self.episode_id:04d} | Steps: {len(self.trajectory)} | Path: {path}")
-
-            self.episode_id += 1
-            self.trajectory.clear()  # 准备下一回合
+        # if self.trajectory:
+        #     obs_arr = np.array([pair[0] for pair in self.trajectory])
+        #     action_arr = np.array([pair[1] for pair in self.trajectory])
+        #
+        #     # 自动生成文件名
+        #     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        #     unique_id = uuid.uuid4().hex[:6]  # 6位短 UUID
+        #     filename = f"expert_ep_{timestamp}_{unique_id}.npz"
+        #     path = os.path.join(self.save_dir, filename)
+        #     np.savez_compressed(path, obs=obs_arr, action=action_arr)
+        #
+        #     # print(f"[Saved] Episode {self.episode_id:04d} | Steps: {len(self.trajectory)} | Path: {path}")
+        #
+        #     self.episode_id += 1
+        # self.trajectory.clear()  # 准备下一回合
 
     def get_action(self, sim: AircraftSimulator):
         delta_value = self.set_delta_value(sim)
@@ -1167,7 +1167,7 @@ class ShootTeacherAgent(BaselineAgent):
         action_all = np.concatenate([action_norm, np.array([shoot_decision]) ])
 
         # 保存当前状态-动作对
-        self.trajectory.append((obs.copy(), action_all.copy()))
+        # self.trajectory.append((obs.copy(), action_all.copy()))
 
         return action_all
 

@@ -1,33 +1,14 @@
-import numpy as np
-import matplotlib.pyplot as plt
+# old_model: trained on [3,3,3]
+# new_model: built for [3,3,3,2]
 
-# 1 * (R < 5) + (R >= 5) * np.clip(-0.032 * R**2 + 0.284 * R + 0.38, 0, 1) + np.clip(np.exp(-0.16 * R), 0, 0.2)
+old_sd = old_model.policy.state_dict()
+new_sd = new_model.policy.state_dict()
 
-def speed_reward(distance):
-    reward = 0
-    if distance > 10000:
-        # 太远
-        reward -= 1
-    elif distance <= 10000:
+# 迁移所有匹配参数（比如 MLP hidden层等）
+for k in new_sd:
+    if k in old_sd and new_sd[k].shape == old_sd[k].shape:
+        new_sd[k] = old_sd[k]
 
-        if distance <= 9000:
-            # 高斯函数下降慢一点：sigma 调大
-            bonus = np.exp(-((distance - 9000) ** 2) / (2 * 1000 ** 2))
-        else:  # if distance <= 10000:
-            # 线性递减：从 1 到 -1
-            ratio = (distance - 9000) / (10000 - 9000)  # 0 到 1
-            bonus = 1 - 2 * ratio
+# ✅ 有些参数 shape 不一样（比如 action_net.3.weight），就不迁移
 
-        reward += 1 * bonus
-
-
-
-vs = np.linspace(6000, 11000, 500)
-rs = [speed_reward(v) for v in vs]
-
-plt.plot(vs, rs)
-plt.title("Speed Reward Curve")
-plt.xlabel("Speed (mh)")
-plt.ylabel("Reward")
-plt.grid(True)
-plt.show()
+new_model.policy.load_state_dict(new_sd)

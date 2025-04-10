@@ -1,12 +1,52 @@
+# train shoot back gail3
+这次全部调用了，包括前三维的动作输出层  
+只能说是一般
+
+
+
+
+# train shoot back gail2
+先调用之前的模型，~~包括前三维在内~~  
+失败了，只调用了前面的
+看这样会不会好一点  
+如果再不行我要BC了  
+log_file='./train/result/train_shoot_back2_gail2.log',  
+render_path: "./render_train/shoot_back2_gail2"  
+
+效果还是不好，还是直接打弹，太让人失望了
+
+
+
+# train shoot back gail
+从shoot back2 的测试结果中学习  
+0.9 的模仿 0.1 的奖励  
+
+## env
+gail训练同样需要运行环境，  
+task 修改为4维动作，最后一维作为打弹输出  
+
+log_file='./train/result/train_shoot_back2_gail.log',  
+config_name='1v1/ShootMissile/HierarchyVsBaselineShootBack',  
+render_path: "./render_train/shoot_back2_gail"  
+
+## result
+训练的不好，没有回转，没有控制
+
+
+
+
+
 # train shoot back
 躲弹后的回转反击
 
 ## 初始智能体
 我机：state_enm  
-shoot_imi
+~~shoot_imi~~  shoot back  失败了  
+改为从头训练，但只训练飞行，打弹又规则决定 shoot back2
 
 敌机：state-my  
-dodge2
+dodge4  
+增加了高度的奖励，避免降高太多
 
 
 ## net
@@ -29,8 +69,8 @@ model_path = "./trained_model/shoot_imitation/ppo_air_combat_imi.zip"
 也重写了，感觉奖励什么的应该是需要重新修改一下的  
 比如距离就不能太近，感觉是吧起码  
 
-
-
+### result
+训练效果很差
 
 
 

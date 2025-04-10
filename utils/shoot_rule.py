@@ -9,9 +9,9 @@ def threat_distance(distance):
 def threat_angle(angle):
     if angle > 50:
         return 0
-    elif 22.5 < angle <= 50:
+    elif 15 < angle <= 50:
         return 1
-    elif 10 < angle <= 22.5:
+    elif 5 < angle <= 15:
         return 2
     else:
         return 3

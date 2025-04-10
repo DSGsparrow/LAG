@@ -18,7 +18,7 @@ acceleration_limit_z: 10.0
 
 # aircraft config
 use_baseline: true
-baseline_type: shoot_imi
+baseline_type: shoot_teacher
 aircraft_configs: {
   A0100: {
     color: Red,
@@ -63,6 +63,7 @@ PostureReward_range_version: v3
 
 AltitudeReward_safe_altitude: 4.0
 AltitudeReward_danger_altitude: 3.5
+AltitudeReward_scale: 5.0
 AltitudeReward_Kv: 0.2
 
 EventDrivenReward_scale: 1

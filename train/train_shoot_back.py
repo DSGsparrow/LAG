@@ -14,7 +14,7 @@ import os
 import logging
 
 from LAGmaster.envs.JSBSim.envs import SingleCombatEnvShootBack
-from net import CustomImitationShootBackPolicy, CustomActorCriticShootBackPolicy
+from net import CustomImitationShootBackPolicy, CustomActorCriticShootBackPolicy, CustomImitationPolicy
 
 # ========== 1. 适配 SB3 的自定义环境 ==========
 class SB3SingleCombatEnv(gymnasium.Env):
@@ -176,9 +176,9 @@ def setup_logging(env_id=0, log_file=None):
 if __name__ == "__main__":
     # 参数
     num_envs = 16
-    log_file = "./train/result/train_shoot_back.log"
-    model_path = ""  # "./trained_model/shoot_imitation/ppo_air_combat_imi.zip"
-    pretrained_pt_path = "./trained_model/imitation_shoot/imitation_pretrained_pytorch.pt"
+    log_file = "./train/result/train_shoot_back2.log"
+    model_path = "" # "./trained_model/shoot_imitation/ppo_air_combat_imi.zip"
+    pretrained_pt_path = ""  # "./trained_model/imitation_shoot/imitation_pretrained_pytorch.pt"
 
     # 多进程环境创建
     def make_env(env_id):
@@ -187,27 +187,28 @@ if __name__ == "__main__":
 
     env = SubprocVecEnv([lambda env_id=i: make_env(env_id) for i in range(num_envs)])
 
-    # 定义 PPO 模型（指定自定义特征提取器）
-    policy_kwargs = dict(
-        features_extractor_class=CustomImitationShootBackPolicy,
-        features_extractor_kwargs={}
-    )
-
     if os.path.exists(model_path):
+        policy_kwargs = dict(
+            features_extractor_class=CustomImitationPolicy,
+            features_extractor_kwargs={}
+        )
         print("✅ 加载已有模型继续训练...")
         model = PPO.load(
             model_path,
             env=env,
-            policy=CustomActorCriticShootBackPolicy,
             policy_kwargs=policy_kwargs,
             tensorboard_log="./ppo_air_combat_tb/",
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
     else:
-        print("🆕 没有旧模型，创建新 PPO 模型")
+        policy_kwargs = dict(
+            features_extractor_class=CustomImitationPolicy,
+            features_extractor_kwargs={}
+        )
+
         model = PPO(
-            policy=CustomActorCriticShootBackPolicy,
-            env=env,
+            "MlpPolicy",
+            env,
             policy_kwargs=policy_kwargs,
             learning_rate=3e-4,
             n_steps=2048,
@@ -221,6 +222,29 @@ if __name__ == "__main__":
             tensorboard_log="./ppo_air_combat_tb/",
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
+
+        # # 定义 PPO 模型（指定自定义特征提取器）
+        # policy_kwargs = dict(
+        #     features_extractor_class=CustomImitationShootBackPolicy,
+        #     features_extractor_kwargs={"features_dim": 128}
+        # )
+        # print("🆕 没有旧模型，创建新 PPO 模型")
+        # model = PPO(
+        #     policy=CustomActorCriticShootBackPolicy,
+        #     env=env,
+        #     policy_kwargs=policy_kwargs,
+        #     learning_rate=3e-4,
+        #     n_steps=2048,
+        #     batch_size=64,
+        #     n_epochs=10,
+        #     gamma=0.99,
+        #     gae_lambda=0.95,
+        #     clip_range=0.2,
+        #     ent_coef=0.02,
+        #     verbose=1,
+        #     tensorboard_log="./ppo_air_combat_tb/",
+        #     device="cuda" if torch.cuda.is_available() else "cpu"
+        # )
 
         # 🔄 加载预训练参数（mlp, gru, action_head）
         if os.path.exists(pretrained_pt_path):

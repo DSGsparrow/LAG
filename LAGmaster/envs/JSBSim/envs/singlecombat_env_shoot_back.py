@@ -15,7 +15,7 @@ from utils.init_state import my_aircraft, calculate_enemy_position
 from .env_base import BaseEnv
 from ..tasks import SingleCombatTask, SingleCombatDodgeMissileTask, HierarchicalSingleCombatDodgeMissileTask, \
     HierarchicalSingleCombatShootTask, SingleCombatShootMissileTask, HierarchicalSingleCombatTask, \
-    SingleCombatShootMissileImitationTask, SingleCombatShootMissileBackTask
+    SingleCombatShootMissileImitationTask, SingleCombatShootMissileBackTask, HierarchicalSingleCombatShootMissileBackTask
 from ..human_task.HumanSingleCombatTask import  HumanSingleCombatTask
 
 
@@ -141,6 +141,8 @@ class SingleCombatEnvShootBack(BaseEnv):
             self.task = SingleCombatShootMissileImitationTask(self.config)
         elif taskname == 'singlecombat_shoot_back':
             self.task = SingleCombatShootMissileBackTask(self.config)
+        elif taskname == 'hierarchical_singlecombat_shoot_back':
+            self.task = HierarchicalSingleCombatShootMissileBackTask(self.config)
         else:
             raise NotImplementedError(f"Unknown taskname: {taskname}")
 
@@ -160,7 +162,7 @@ class SingleCombatEnvShootBack(BaseEnv):
                 [random_state["enemy_vx"], random_state["enemy_vy"], random_state["enemy_vz"]]) / 0.3048
             enm_random_v = np.linalg.norm(
                 [random_state["my_vx"], random_state["my_vy"], random_state["my_vz"]]) / 0.3048
-            if random_state ["enemy_alt"] > 2700 and ego_random_v > 400 and enm_random_v > 400 and random_state ["my_alt"] > 2700:
+            if random_state ["enemy_alt"] > 4200 and ego_random_v > 400 and enm_random_v > 400 and random_state ["my_alt"] > 4200:
                 break
 
 

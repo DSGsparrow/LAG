@@ -14,7 +14,7 @@ import os
 import logging
 
 from LAGmaster.envs.JSBSim.envs import SingleCombatEnv, SingleControlEnv, SingleCombatEnvShoot
-from net.net_shoot_imitation import CustomPolicy
+from net.net_shoot_imitation import CustomImitationPolicy
 
 # ========== 1. 适配 SB3 的自定义环境 ==========
 class SB3SingleCombatEnv(gymnasium.Env):
@@ -188,7 +188,7 @@ if __name__ == "__main__":
 
     # 定义 PPO 模型（自定义 MLP 作为特征提取器）
     policy_kwargs = dict(
-        features_extractor_class=CustomPolicy,
+        features_extractor_class=CustomImitationPolicy,
         features_extractor_kwargs=dict(action_dim=env.action_space)
     )
 
