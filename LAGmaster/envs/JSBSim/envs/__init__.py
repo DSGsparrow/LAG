@@ -6,3 +6,4 @@ from .singlecombat_env_test import random_init_state
 from .singlecombat_env_shoot import SingleCombatEnvShoot
 from .singlecombat_env_dodge import SingleCombatEnvDodge
 from .singlecombat_env_shoot_back import SingleCombatEnvShootBack
+from .singlecombat_env_guide import SingleCombatEnvGuide

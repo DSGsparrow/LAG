@@ -34,6 +34,55 @@ def extract_failed_states(log_lines, output_file):
                     print(f"解析失败: {e}")
     return count
 
+def extract_launch_mission_states(log_file: str, output_file: str):
+    """
+    从日志文件中提取发射导弹时的状态并将其保存为 JSON 文件。
+
+    :param log_file: 输入日志文件路径
+    :param output_file: 输出 JSON 文件路径
+    """
+    # 字段顺序（必须和state顺序一一对应）
+    state_keys = [
+        'my_lon', 'my_lat', 'my_alt',
+        'my_x', 'my_y', 'my_z',
+        'my_vx', 'my_vy', 'my_vz',
+        'enemy_lon', 'enemy_lat', 'enemy_alt',
+        'enemy_x', 'enemy_y', 'enemy_z',
+        'enemy_vx', 'enemy_vy', 'enemy_vz'
+    ]
+
+    # 用于匹配包含 state 的 launch mission 行
+    state_line_pattern = re.compile(r'state=\[([^\]]+)\]')
+
+    results = []
+
+    with open(log_file, 'r', encoding='utf-8') as f:
+        for line in f:
+            if "A0100 launch mission!" in line and "state=[" in line:
+                match = state_line_pattern.search(line)
+                if match:
+                    # 提取 state 中的数字列表
+                    state_str = match.group(1)
+                    state_values = [float(x.strip()) for x in state_str.split(',')]
+
+                    if len(state_values) != len(state_keys):
+                        print(f"⚠️ 状态字段数量不匹配，跳过此行：{line.strip()}")
+                        continue
+
+                    # 构建字典
+                    state_dict = dict(zip(state_keys, state_values))
+                    results.append(state_dict)
+
+    # 将结果保存为 JSON 文件
+    with open(output_file, 'w', encoding='utf-8') as json_file:
+        json.dump(results, json_file, ensure_ascii=False, indent=4)
+
+    print(f"提取成功，已保存至 {output_file}")
+
+# 调用示例
+# extract_launch_mission_states("your_log_file.log", "launch_mission_states.json")
+
+
 def main(log_file_path, output_jsonl_path):
     with open(log_file_path, "r", encoding="utf-8") as f:
         log_data = f.readlines()
@@ -59,4 +108,6 @@ def main(log_file_path, output_jsonl_path):
 
 if __name__ == "__main__":
     # 修改路径为你自己的文件路径
-    main("test_result/log/test_shoot3_vs_dodge2.log", "test_result/result/states_3_dodge2.jsonl")
+    # main("test_result/log/test_shoot3_vs_dodge2.log", "test_result/result/states_3_dodge2.jsonl")
+    extract_launch_mission_states("test_result/log/test_shoot_imi_vs_dodge2.log",
+                                  "test_result/result/launch_states.json")
