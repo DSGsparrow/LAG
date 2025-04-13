@@ -128,6 +128,7 @@ def setup_logging(env_id=0, log_file=None):
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, default="1v1/ShootMissile/HierarchyVsBaselineShootSolo")
 
     # 基本路径
     parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_solo.log")
@@ -135,7 +136,6 @@ def parse_args():
     parser.add_argument("--pretrained_pt_path", type=str, default="")
     parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_solo_checkpoints/")
     parser.add_argument("--tb_log", type=str, default="./ppo_air_combat_tb/")
-    parser.add_argument("--config", type=str, default="1v1/ShootMissile/HierarchyVsBaselineGuide")
 
     # 模型路径
     parser.add_argument("--fly_model_path", type=str, default="trained_model/shoot_back/ppo_air_combat.zip")
@@ -146,7 +146,7 @@ def parse_args():
     parser.add_argument("--raw_obs_dim", type=int, default=21)
     parser.add_argument("--fly_act_dim", type=int, default=3)
     parser.add_argument("--fire_act_dim", type=int, default=2)
-    parser.add_argument("--warmup_action", nargs='+', type=float, default=[1, 2, 1, 0.0, 0.0])
+    parser.add_argument("--warmup_action", nargs='+', type=float, default=[1, 2, 1, 0.0])
 
     # 多线程
     parser.add_argument("--num_envs", type=int, default=1)

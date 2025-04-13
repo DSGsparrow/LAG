@@ -4,6 +4,9 @@ from collections import deque
 from stable_baselines3 import PPO
 from gymnasium import spaces
 
+import torch.nn.functional as F
+import torch
+
 
 class ShootControlWrapper(gym.Env):
     def __init__(self, base_env_fn, args):
@@ -16,6 +19,8 @@ class ShootControlWrapper(gym.Env):
         self.fly_act_dim = args.fly_act_dim
         self.fire_act_dim = args.fire_act_dim
         self.total_act_dim = self.fly_act_dim + self.fire_act_dim
+
+        self.is_eval = getattr(args, "is_eval", False)
 
         # 模型加载
         self.fly_model = PPO.load(args.fly_model_path)
@@ -63,7 +68,8 @@ class ShootControlWrapper(gym.Env):
         fly_action, _ = self.fly_model.predict(self.obs_history[-1], deterministic=True)
         action = np.concatenate([fly_action, fire_action])
 
-        obs, reward, done, truncated, info = self.env.step(action)
+        norm_action = self.normalize_action(action, mode='eval' if self.is_eval else 'train')
+        obs, reward, done, truncated, info = self.env.step(norm_action)
         self.obs_history.append(obs)
         self.act_history.append(action)
         observation = self._get_observation()
@@ -77,7 +83,7 @@ class ShootControlWrapper(gym.Env):
             done = False
             while not done:
                 guide_action, _ = self.guide_model.predict(obs, deterministic=True)
-                full_action = np.concatenate([guide_action, np.zeros(self.fire_act_dim)])
+                full_action = np.concatenate([guide_action, np.zeros(1)])
                 obs, reward, done, truncated, info = self.env.step(full_action)
 
             # 奖励加到打弹那一帧
@@ -97,3 +103,27 @@ class ShootControlWrapper(gym.Env):
 
     def close(self):
         self.env.close()
+
+    def normalize_action(self, action, temperature=0.5, threshold=0.85, mode='train'):
+        """
+        将网络输出的 action[3] (act score), action[4] (wait score) 合成最终是否打弹的 0/1 决策。
+        前 3 维直接复制，最后一维根据 softmax + 阈值判断是否打弹。
+        """
+        norm_action = np.zeros(4)
+        norm_action[0] = action[0]
+        norm_action[1] = action[1]
+        norm_action[2] = action[2]
+
+        # softmax + 温度
+        logits = torch.tensor([action[3], action[4]])
+        probs = F.softmax(logits / temperature, dim=0)
+        act_prob = probs[0].item()
+
+        if mode == 'train':
+            do_act = np.random.rand() < act_prob
+        else:
+            do_act = threshold < act_prob
+
+        norm_action[3] = 1.0 if do_act else 0.0
+
+        return norm_action
