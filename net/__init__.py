@@ -3,3 +3,4 @@ from .net_shoot_imitation import CustomImitationPolicy
 from .net_shoot_missile import CustomPolicy
 from .net_shoot_with_prior import CustomActorCriticPolicy
 from .net_shoot_back import CustomActorCriticShootBackPolicy, CustomImitationShootBackPolicy
+from .net_transformer import CustomTransformerExtractor

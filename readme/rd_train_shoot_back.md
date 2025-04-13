@@ -42,7 +42,7 @@ render_path: "./render_train/shoot_back2_gail"
 ## 初始智能体
 我机：state_enm  
 ~~shoot_imi~~  shoot back  失败了  
-改为从头训练，但只训练飞行，打弹又规则决定 shoot back2
+改为从头训练，但只训练飞行，打弹由规则决定 shoot back2
 
 敌机：state-my  
 dodge4  
