@@ -3,6 +3,8 @@
 \render_train
 \render_result_random
 \ppo_air_combat_tb
+\ppo_fire_debug
 \trained_model
 \test_result
 \train\result
+\ppt
