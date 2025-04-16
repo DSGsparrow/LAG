@@ -26,18 +26,18 @@ class ShootEventDrivenReward(BaseRewardFunction):
         """
         reward = 0
         if env.agents[agent_id].is_shotdown:
-            reward -= 200
+            reward -= 1
         elif env.agents[agent_id].is_crash:
-            reward -= 200
+            reward -= 1
         for missile in env.agents[agent_id].launch_missiles:
             if missile.is_success:
-                reward += 200
+                reward += 1
 
         if all([enemy.is_alive for enemy in env.agents[agent_id].enemies]) \
                 and env.agents[agent_id].num_left_missiles == 0 \
                 and all([not missile.is_alive for missile in env.agents[agent_id].launch_missiles]) \
                 and agent_id == 'A0100':
-            reward -= 200
+            reward -= 1
             logging.info(f'{agent_id} mission failed! Did not hit enemy! event reward={reward}')
 
         # if all([not missile.is_alive for missile in env.agents[agent_id].under_missiles]) \

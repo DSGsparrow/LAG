@@ -108,7 +108,7 @@ class HierarchicalSingleCombatShootMissileSoloTask(HierarchicalSingleCombatTask,
             # AltitudeReward(self.config),
             ShootEventDrivenReward(self.config),
             ShootPenaltyReward(self.config),
-            ShootGapPenaltyReward(self.config),
+            # ShootGapPenaltyReward(self.config),
             # RelativeAltitudeReward(self.config),
             ShootWaitReward(self.config),
         ]

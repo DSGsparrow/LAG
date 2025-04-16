@@ -46,36 +46,39 @@ class ShootWaitReward(BaseRewardFunction):
         # elif ego_AO > 50.:  # 视线角过大不可以打弹
         #     self._shoot_action[agent_id] = 0
 
+        w = [0.35, 0.3, 0.2, 0.15]
+
         reward = 0
         if task.remaining_missiles[agent_id] == self.pre_remaining_missiles[agent_id]:
             # 没有打弹的话
+            #各个奖励范围都在0-1，最终奖励也是0-1
 
             # 1 distance
             # self.shoot_distance_center米内就小于1了
             delta = self.shoot_distance_center - distance
             alpha = 0.0005
             reward_d = np.exp(-alpha * delta)
-            reward_d = min(reward_d, 1.5)  # 限制最大奖励
+            reward_d = min(reward_d, 2) / 2  # 限制最大奖励
 
             # 2 self angle
             # 50度内小于1
             delta = ego_AO - 50.0
             beta = 0.05
             reward_a = np.exp(beta * delta)
-            reward_a = min(reward_a, 1.5)  # 限制最大奖励
+            reward_a = min(reward_a, 2) / 2  # 限制最大奖励
 
             # 3 height diff
             # 高500米的时候发射最好
             gamma = 1
-            reward_hd = 2 * (1 - np.exp(-gamma * abs(relative_height - 0.5)))
+            reward_hd = (1 - np.exp(-gamma * abs(relative_height - 0.5)))
 
             # 4 speed
             # 0.8mach以内小于1
             lam = 0.01
             reward_v = np.exp(-lam * (ego_v - 272))
-            reward_v = min(reward_v, 1.5)  # 限制最大奖励
+            reward_v = min(reward_v, 2) / 2  # 限制最大奖励
 
-            reward = reward_hd * reward_a * reward_d * reward_v
+            reward = w[0] * reward_d + w[1] * reward_a + w[2] * reward_hd + w[3] * reward_v
 
         self.pre_remaining_missiles[agent_id] = task.remaining_missiles[agent_id]
         return self._process(reward, agent_id)

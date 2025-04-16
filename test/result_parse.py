@@ -108,6 +108,6 @@ def main(log_file_path, output_jsonl_path):
 
 if __name__ == "__main__":
     # 修改路径为你自己的文件路径
-    # main("test_result/log/test_shoot3_vs_dodge2.log", "test_result/result/states_3_dodge2.jsonl")
-    extract_launch_mission_states("test_result/log/test_shoot_imi_vs_dodge2.log",
-                                  "test_result/result/launch_states.json")
+    main("train/result/train_guide.log", "test_result/result/states_3_dodge2.jsonl")
+    # extract_launch_mission_states("test_result/log/test_shoot_imi_vs_dodge2.log",
+    #                               "test_result/result/launch_states.json")

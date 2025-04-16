@@ -30,6 +30,8 @@ class ShootPenaltyReward(BaseRewardFunction):
 
         Returns:
             (float): reward
+
+        [-35, 20]
         """
 
         obss = env.get_obs()
@@ -71,17 +73,17 @@ class ShootPenaltyReward(BaseRewardFunction):
             elif ego_AO <= 50:
 
                 ratio = (ego_AO - self.shoot_angle_center) / (50 - self.shoot_angle_center)  # 0 到 1
-                bonus = 1 - 2 * ratio
+                bonus = 1 - 2 * ratio # -1到1
 
                 # bonus = np.exp(-((ego_AO - self.shoot_angle_center) ** 2) / (2 * self.shoot_angle_sigma ** 2))
-                reward += 7 * bonus
+                reward += 10 * bonus
             if ego_TA > 150:
                 reward += 5
 
             # 高度
-            if relative_height > 0:
-                bonus = np.clip(relative_height, 0, 2) / 2
-                reward += 5 * bonus
+            # if relative_height > 0:
+            bonus = np.clip(relative_height - 0.5, -2, 2) / 2
+            reward += 5 * bonus
 
         self.pre_remaining_missiles[agent_id] = task.remaining_missiles[agent_id]
         return self._process(reward, agent_id)

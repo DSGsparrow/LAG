@@ -13,7 +13,7 @@ import argparse
 import os
 import logging
 
-from LAGmaster.envs.JSBSim.envs import SingleCombatEnvShootBack
+from LAGmaster.envs.JSBSim.envs import SingleCombatEnvShootSolo
 from net import (CustomImitationShootBackPolicy, CustomActorCriticShootBackPolicy,
                  CustomImitationPolicy, CustomTransformerExtractor)
 
@@ -24,7 +24,7 @@ class SB3SingleCombatEnv(gymnasium.Env):
 
     def __init__(self, env_id, config_name):
         super(SB3SingleCombatEnv, self).__init__()
-        self.env = SingleCombatEnvShootBack(config_name, env_id)  # 你的原始环境
+        self.env = SingleCombatEnvShootSolo(config_name, env_id)  # 你的原始环境
         # obs_shape = self.env.get_obs().shape[0]  # 获取观测空间维度
         # act_shape = self.env.get_action_space().shape[0]  # 获取动作空间维度
         # 继承原始环境的动作空间和观察空间
@@ -61,6 +61,8 @@ class SB3SingleCombatEnv(gymnasium.Env):
         # reward 和dones什么的直接取值
 
         action = np.expand_dims(action, axis=0) if action.ndim == 1 else action
+
+        action = action.astype(int)
 
         obs, rewards, dones, info = self.env.step(action)
 
@@ -131,28 +133,29 @@ def parse_args():
     parser.add_argument("--config", type=str, default="1v1/ShootMissile/HierarchyVsBaselineShootSolo")
 
     # 基本路径
-    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_solo.log")
+    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_solo3.log")
     parser.add_argument("--model_path", type=str, default="")
     parser.add_argument("--pretrained_pt_path", type=str, default="")
-    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_solo_checkpoints/")
+    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_solo3/shoot_solo_checkpoints/")
     parser.add_argument("--tb_log", type=str, default="./ppo_air_combat_tb/")
+    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_solo3/ppo_air_combat")
 
     # 模型路径
     parser.add_argument("--fly_model_path", type=str, default="trained_model/shoot_back/ppo_air_combat.zip")
     parser.add_argument("--guide_model_path", type=str, default="trained_model/guide/ppo_air_combat.zip")
 
     # 环境参数
-    parser.add_argument("--history_len", type=int, default=5)
+    parser.add_argument("--history_len", type=int, default=10)
     parser.add_argument("--raw_obs_dim", type=int, default=21)
     parser.add_argument("--fly_act_dim", type=int, default=3)
     parser.add_argument("--fire_act_dim", type=int, default=2)
-    parser.add_argument("--warmup_action", nargs='+', type=float, default=[1, 2, 1, 0.0])
+    parser.add_argument("--warmup_action", nargs='+', type=float, default=[1, 2, 1, 0.0, 0.0])
 
     # 多线程
-    parser.add_argument("--num_envs", type=int, default=1)
+    parser.add_argument("--num_envs", type=int, default=16)
 
     # 训练参数
-    parser.add_argument("--total_timesteps", type=int, default=3_000_000)
+    parser.add_argument("--total_timesteps", type=int, default=5_000_000)
     parser.add_argument("--save_freq", type=int, default=10_000)
     parser.add_argument("--learning_rate", type=float, default=3e-4)
     parser.add_argument("--n_steps", type=int, default=2048)
@@ -248,9 +251,12 @@ def main():
 
     model.learn(
         total_timesteps=args.total_timesteps,
-        tb_log_name="shoot_solo",
+        tb_log_name="shoot_solo3",
         callback=checkpoint_callback
     )
+
+    # 最终训练完成后保存一次完整模型
+    model.save(args.save_model_path)
 
 
 if __name__ == "__main__":

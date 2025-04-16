@@ -7,6 +7,7 @@ from gymnasium import spaces
 import torch.nn.functional as F
 import torch
 
+import logging
 
 class ShootControlWrapper(gym.Env):
     def __init__(self, base_env_fn, args):
@@ -56,10 +57,11 @@ class ShootControlWrapper(gym.Env):
         self.launch_index = None
 
         for _ in range(self.history_len):
-            obs, reward, done, truncated, info = self.env.step(self.warmup_action)
+            norm_action = self.normalize_action(self.warmup_action, mode='eval' if self.is_eval else 'train')
+            obs, reward, done, truncated, info = self.env.step(norm_action)
             self.obs_history.append(obs)
             self.act_history.append(self.warmup_action)
-            self.episode_data.append([self._get_observation(), reward, done, truncated, info])
+        self.episode_data.append([self._get_observation(), reward, done, truncated, info])
 
         return self._get_observation(), {}
 
@@ -84,11 +86,19 @@ class ShootControlWrapper(gym.Env):
             while not done:
                 guide_action, _ = self.guide_model.predict(obs, deterministic=True)
                 full_action = np.concatenate([guide_action, np.zeros(1)])
+
+                # norm_action = self.normalize_action(full_action, mode='eval' if self.is_eval else 'train')
+
                 obs, reward, done, truncated, info = self.env.step(full_action)
 
             # 奖励加到打弹那一帧
             if self.launch_index is not None:
                 self.episode_data[self.launch_index][1] += reward
+
+            cumulative_reward = 0
+            for i in range(len(self.episode_data)):
+                cumulative_reward += self.episode_data[i][1]
+            logging.info("cumulative_reward: " + str(cumulative_reward))
 
             return observation, self.episode_data[self.launch_index][1], True, True, info
 
@@ -104,7 +114,7 @@ class ShootControlWrapper(gym.Env):
     def close(self):
         self.env.close()
 
-    def normalize_action(self, action, temperature=0.5, threshold=0.85, mode='train'):
+    def normalize_action(self, action, temperature=0.5, threshold=0.7, mode='train'):
         """
         将网络输出的 action[3] (act score), action[4] (wait score) 合成最终是否打弹的 0/1 决策。
         前 3 维直接复制，最后一维根据 softmax + 阈值判断是否打弹。
@@ -120,10 +130,14 @@ class ShootControlWrapper(gym.Env):
         act_prob = probs[0].item()
 
         if mode == 'train':
-            do_act = np.random.rand() < act_prob
+            # do_act = np.random.rand() < act_prob  # 伯努利 随机
+            do_act = threshold < act_prob
         else:
             do_act = threshold < act_prob
 
         norm_action[3] = 1.0 if do_act else 0.0
+
+        if action[3] == action[4] == 0:
+            norm_action[3] = 0.
 
         return norm_action
