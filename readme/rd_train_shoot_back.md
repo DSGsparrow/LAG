@@ -1,3 +1,15 @@
+# train shoot back 2
+~~用shoot back 1的继续训练~~  
+使用transformer模型，因此不再继续训练  
+解决问题：  
+随着对方降高太多
+
+使用solo相同的adapter  
+使用相同transformer  
+
+
+
+
 # train shoot back gail3
 这次全部调用了，包括前三维的动作输出层  
 只能说是一般
