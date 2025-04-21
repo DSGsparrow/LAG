@@ -41,6 +41,8 @@ class ShootPenaltyReward(BaseRewardFunction):
         distance = obs[13] * 10000
         relative_height = obs[10] #  * 1000
 
+        ego_v = np.linalg.norm([obs[5], obs[6], obs[7]]) * 340
+
         # if distance > 1:  # 距离超过10公里
         #     self._shoot_action[agent_id] = 0
         #
@@ -50,11 +52,12 @@ class ShootPenaltyReward(BaseRewardFunction):
         reward = 0
         if task.remaining_missiles[agent_id] == self.pre_remaining_missiles[agent_id] - 1:
             # 打弹惩罚，防止乱打
-            reward -= 10
+            reward -= 1
             # 距离
             if distance > 10000:
                 # 太远
-                reward -= 10
+                # reward -= 10
+                reward -= 1
             elif distance <= 10000:
 
                 if distance <= self.shoot_distance_center:
@@ -64,26 +67,36 @@ class ShootPenaltyReward(BaseRewardFunction):
                     # 线性递减：从 1 到 -1
                     ratio = (distance - self.shoot_distance_center) / (10000 - self.shoot_distance_center)  # 0 到 1
                     bonus =  1 - 2 * ratio
+                    # bonus =  1 - 1 * ratio
 
-                reward += 10 * bonus
+                reward += 1 * bonus
+
             # 角度
             if ego_AO > 50:
                 # 太远
-                reward -= 10
+                reward -= 1
             elif ego_AO <= 50:
 
                 ratio = (ego_AO - self.shoot_angle_center) / (50 - self.shoot_angle_center)  # 0 到 1
                 bonus = 1 - 2 * ratio # -1到1
 
                 # bonus = np.exp(-((ego_AO - self.shoot_angle_center) ** 2) / (2 * self.shoot_angle_sigma ** 2))
-                reward += 10 * bonus
+                reward += 1 * bonus
+
             if ego_TA > 150:
-                reward += 5
+                reward += 0.5
+
+            # 速度
+            # 0-0.5
+            reward_v = (ego_v - 170)/(340 - 170)
+            reward_v = np.clip(reward_v, 0, 1) / 2  # 限制最大奖励
+
+            reward += reward_v
 
             # 高度
             # if relative_height > 0:
             bonus = np.clip(relative_height - 0.5, -2, 2) / 2
-            reward += 5 * bonus
+            reward += 0.5 * bonus
 
         self.pre_remaining_missiles[agent_id] = task.remaining_missiles[agent_id]
         return self._process(reward, agent_id)

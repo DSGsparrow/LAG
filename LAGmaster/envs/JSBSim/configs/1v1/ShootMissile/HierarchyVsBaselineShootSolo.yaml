@@ -2,7 +2,7 @@
 task: hierarchical_singlecombat_shoot_solo
 
 # file path
-render_path: "./render_train/shoot_solo3"
+render_path: "./render_train/shoot_solo5"
 state_path: "./test_result/result/states_imi_dodge2.jsonl"
 
 # shoot area
@@ -62,12 +62,15 @@ battle_field_center: [120.0, 60.0, 0.0]
 # reward config
 #MissilePostureReward_scale: 30
 
-EventDrivenReward_scale: 50
-EventDrivenReward_potential: true
+ShootEventDrivenReward_scale: 300
+#EventDrivenReward_potential: true
 
-ShootPenaltyReward_scale: 1
+ShootEnemyPostureReward_scale: 30
+ShootEnemyPostureReward_potential: true
+
+ShootPenaltyReward_scale: 50
 
 ShootGapPenaltyReward_scale: 1
 
-ShootWaitReward_scale: 5
+ShootWaitReward_scale: 0.1
 

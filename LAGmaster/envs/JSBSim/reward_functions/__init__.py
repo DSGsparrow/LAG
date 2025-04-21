@@ -13,3 +13,4 @@ from .guide.posture_guide_reward import PostureGuideReward
 from .guide.altitude_reward import AltitudeGuideReward
 from .guide.speed_reward import SpeedGuideReward
 from .shoot_wait_reward import ShootWaitReward
+from .shoot.shoot_enemy_posture_reward import ShootEnemyPostureReward

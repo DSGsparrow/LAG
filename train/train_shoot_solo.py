@@ -133,12 +133,12 @@ def parse_args():
     parser.add_argument("--config", type=str, default="1v1/ShootMissile/HierarchyVsBaselineShootSolo")
 
     # 基本路径
-    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_solo3.log")
-    parser.add_argument("--model_path", type=str, default="")
+    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_solo5.log")
+    parser.add_argument("--model_path", type=str, default="trained_model/shoot_solo4/ppo_air_combat.zip")
     parser.add_argument("--pretrained_pt_path", type=str, default="")
-    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_solo3/shoot_solo_checkpoints/")
+    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_solo5/shoot_solo_checkpoints/")
     parser.add_argument("--tb_log", type=str, default="./ppo_air_combat_tb/")
-    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_solo3/ppo_air_combat")
+    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_solo5/ppo_air_combat")
 
     # 模型路径
     parser.add_argument("--fly_model_path", type=str, default="trained_model/shoot_back/ppo_air_combat.zip")
@@ -156,7 +156,7 @@ def parse_args():
 
     # 训练参数
     parser.add_argument("--total_timesteps", type=int, default=5_000_000)
-    parser.add_argument("--save_freq", type=int, default=10_000)
+    parser.add_argument("--save_freq", type=int, default=4_000)
     parser.add_argument("--learning_rate", type=float, default=3e-4)
     parser.add_argument("--n_steps", type=int, default=2048)
     parser.add_argument("--batch_size", type=int, default=64)
@@ -251,7 +251,7 @@ def main():
 
     model.learn(
         total_timesteps=args.total_timesteps,
-        tb_log_name="shoot_solo3",
+        tb_log_name="shoot_solo5",
         callback=checkpoint_callback
     )
 

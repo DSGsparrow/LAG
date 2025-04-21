@@ -91,9 +91,10 @@ class ShootControlWrapper(gym.Env):
 
                 obs, reward, done, truncated, info = self.env.step(full_action)
 
-            # 奖励加到打弹那一帧
-            if self.launch_index is not None:
-                self.episode_data[self.launch_index][1] += reward
+                # 奖励加到打弹那一帧
+                # 打弹后也有奖励
+                if self.launch_index is not None:
+                    self.episode_data[self.launch_index][1] += reward
 
             cumulative_reward = 0
             for i in range(len(self.episode_data)):
@@ -101,6 +102,12 @@ class ShootControlWrapper(gym.Env):
             logging.info("cumulative_reward: " + str(cumulative_reward))
 
             return observation, self.episode_data[self.launch_index][1], True, True, info
+
+        if done:
+            cumulative_reward = 0
+            for i in range(len(self.episode_data)):
+                cumulative_reward += self.episode_data[i][1]
+            logging.info("cumulative_reward: " + str(cumulative_reward))
 
         return observation, reward, done, truncated, info
 
@@ -114,7 +121,7 @@ class ShootControlWrapper(gym.Env):
     def close(self):
         self.env.close()
 
-    def normalize_action(self, action, temperature=0.5, threshold=0.7, mode='train'):
+    def normalize_action(self, action, temperature=0.5, threshold=0.5, mode='train'):
         """
         将网络输出的 action[3] (act score), action[4] (wait score) 合成最终是否打弹的 0/1 决策。
         前 3 维直接复制，最后一维根据 softmax + 阈值判断是否打弹。

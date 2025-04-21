@@ -6,6 +6,7 @@ import logging
 from .singlecombat_task import SingleCombatTask, HierarchicalSingleCombatTask
 from ..reward_functions import AltitudeReward, PostureReward, MissilePostureReward, EventDrivenReward, PostureShootReward
 from ..reward_functions import ShootPenaltyReward, ShootGapPenaltyReward, RelativeAltitudeReward, ShootEventDrivenReward
+from ..reward_functions import ShootEnemyPostureReward
 from ..termination_conditions import ExtremeState, LowAltitude, Overload, Timeout, DodgeMissileSafeReturn
 from ..termination_conditions import SafeReturn, ShootSafeReturn
 from ..reward_functions import EndAltitudeReward, ShootWaitReward
@@ -111,6 +112,7 @@ class HierarchicalSingleCombatShootMissileSoloTask(HierarchicalSingleCombatTask,
             # ShootGapPenaltyReward(self.config),
             # RelativeAltitudeReward(self.config),
             ShootWaitReward(self.config),
+            ShootEnemyPostureReward(self.config),
         ]
 
         self.termination_conditions = [
@@ -181,6 +183,10 @@ class HierarchicalSingleCombatShootMissileSoloTask(HierarchicalSingleCombatTask,
     def reset(self, env):
         self._shoot_action = {agent_id: 0 for agent_id in env.agents.keys()}
         self._inner_rnn_states = {agent_id: np.zeros((1, 1, 128)) for agent_id in env.agents.keys()}
+
+        self.lock_duration_num = {agent_id: 0 for agent_id in env.agents.keys()}
+        self.lose_lock_duration_num = {agent_id: 0 for agent_id in env.agents.keys()}
+
         return SingleCombatDodgeMissileTask.reset(self, env)
 
     def step(self, env):
@@ -191,6 +197,21 @@ class HierarchicalSingleCombatShootMissileSoloTask(HierarchicalSingleCombatTask,
 
             obs = self.get_obs(env, agent_id)
             state = self.get_states(env, agent_id)
+
+            target = agent.enemies[0].get_position() - agent.get_position()
+            heading = agent.get_velocity()
+            distance = np.linalg.norm(target)
+            attack_angle = np.rad2deg(
+                np.arccos(np.clip(np.sum(target * heading) / (distance * np.linalg.norm(heading) + 1e-8), -1, 1)))
+
+            if attack_angle < self.max_attack_angle:
+                # 超出视线角开始计时
+                self.lock_duration_num[agent_id] += 1
+            else:
+                self.lock_duration_num[agent_id] = 0
+                if self.remaining_missiles['A0100'] == 0 and agent_id == 'A0100':
+                    # A已经发弹
+                    self.lose_lock_duration_num['B0100'] += 1
 
             if shoot_flag:
                 new_missile_uid = agent_id + str(self.remaining_missiles[agent_id])

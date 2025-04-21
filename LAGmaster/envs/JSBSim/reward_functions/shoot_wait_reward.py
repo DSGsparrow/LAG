@@ -40,6 +40,8 @@ class ShootWaitReward(BaseRewardFunction):
 
         ego_v = np.linalg.norm([obs[5], obs[6], obs[7]]) * 340
 
+        lock_duration = task.lock_duration_num[agent_id]
+
         # if distance > 1:  # 距离超过10公里
         #     self._shoot_action[agent_id] = 0
         #
@@ -49,7 +51,7 @@ class ShootWaitReward(BaseRewardFunction):
         w = [0.35, 0.3, 0.2, 0.15]
 
         reward = 0
-        if task.remaining_missiles[agent_id] == self.pre_remaining_missiles[agent_id]:
+        if task.remaining_missiles[agent_id] == self.pre_remaining_missiles[agent_id] == 1:
             # 没有打弹的话
             #各个奖励范围都在0-1，最终奖励也是0-1
 
@@ -79,6 +81,9 @@ class ShootWaitReward(BaseRewardFunction):
             reward_v = min(reward_v, 2) / 2  # 限制最大奖励
 
             reward = w[0] * reward_d + w[1] * reward_a + w[2] * reward_hd + w[3] * reward_v
+
+        if lock_duration > 50:
+            reward = 0.5 * reward / (lock_duration - 50)
 
         self.pre_remaining_missiles[agent_id] = task.remaining_missiles[agent_id]
         return self._process(reward, agent_id)
