@@ -42,14 +42,10 @@ class AltitudeGuideReward(BaseRewardFunction):
             PH = np.clip(ego_z / self.danger_altitude, 0., 1.) - 1. - 1.
         new_reward = Pv + PH
 
-        if diff_z > 0:
-            reward_h = np.clip(diff_z, 0, 2) / 2
-            if diff_z >= 10:
-                reward_h = 1
-        else:
-            reward_h = 0
 
-        if diff_z <= 2:
+        reward_h = np.clip(diff_z, 0, 2) / 2
+
+        if diff_z <= 0.5:
             reward_v = np.clip(ego_vz / self.Kv, 0, 1)
         else:
             reward_v = 0

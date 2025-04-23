@@ -150,47 +150,31 @@ class SingleCombatEnvShootBack(BaseEnv):
         return math.degrees(math.atan2(vy, vx)) % 360
 
     def set_random_enemy(self):
-        states = []
-        with open(self.state_path, "r", encoding="utf-8") as f:
-            for line in f:
-                state = json.loads(line)
-                states.append(state)
-
-        while True:
-            random_state = random.choice(states)
-            ego_random_v = np.linalg.norm(
-                [random_state["enemy_vx"], random_state["enemy_vy"], random_state["enemy_vz"]]) / 0.3048
-            enm_random_v = np.linalg.norm(
-                [random_state["my_vx"], random_state["my_vy"], random_state["my_vz"]]) / 0.3048
-            if random_state ["enemy_alt"] > 4200 and ego_random_v > 400 and enm_random_v > 400 and random_state ["my_alt"] > 4200:
-                break
-
-
         """设置当前敌机信息"""
+        init_ego_alt = self.np_random.uniform(14000., 30000.)
+        init_ego_speed = self.np_random.uniform(400., 1000.)
+        init_enm_alt = self.np_random.uniform(14000., 30000.)
+        init_enm_speed = self.np_random.uniform(400., 1000.)
+        init_enm_heading = self.np_random.uniform(0., 360.)
+        init_enm_distance = self.np_random.uniform(2000., 20000.)
+        init_enm_angle = self.np_random.uniform(0., 360.)
 
-        # ego_random_v = np.linalg.norm([random_state["enemy_vx"], random_state["enemy_vy"], random_state["enemy_vz"]]) / 0.3048
-        # enm_random_v = np.linalg.norm([random_state["my_vx"], random_state["my_vy"], random_state["my_vz"]]) / 0.3048
-        ego_random_heading = self.compute_heading(random_state["enemy_vx"], random_state["enemy_vy"])
-        enm_random_heading = self.compute_heading(random_state["my_vx"], random_state["my_vy"])
-
-        dx = random_state["my_x"] - random_state["enemy_x"]
-        dy = random_state["my_y"] - random_state["enemy_y"]
-        dz = random_state["my_z"] - random_state["enemy_z"]
-        distance = math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+        init_enm_lat, init_enm_lon = calculate_enemy_position(init_enm_distance, init_enm_angle)
 
         enemy = {
-            "ego_lon": random_state["enemy_lat"],
-            "ego_lat": random_state["enemy_lon"],
-            "ego_alt": random_state["enemy_alt"] / 0.3048,
-            "ego_speed": ego_random_v,
-            "ego_heading": ego_random_heading,
+            "ego_lon": 120,
+            "ego_lat": 60,
+            "ego_alt": init_ego_alt,
+            "ego_speed": init_ego_speed,
+            "ego_heading": 0,
 
-            "enm_lat": random_state["my_lon"],
-            "enm_lon": random_state["my_lat"],
-            "enm_alt": random_state["my_alt"] / 0.3048,
-            "enm_speed": enm_random_v,
-            "enm_heading": enm_random_heading,
-            "enm_distance": distance,
+            "enm_lat": init_enm_lat,
+            "enm_lon": init_enm_lon,
+            "enm_alt": init_enm_alt,
+            "enm_speed": init_enm_speed,
+            "enm_heading": init_enm_heading,
+            "enm_distance": init_enm_distance,
+            "enm_angle": init_enm_angle,
         }
 
         self.current_enemy = enemy
@@ -215,10 +199,10 @@ class SingleCombatEnvShootBack(BaseEnv):
         # rand_lat, rand_lon, heading_deg, rand_distance = random_init_state()
 
         self.init_states[0].update({
-            'ic_long_gc_deg': enemy["ego_lon"],  # 经度
-            'ic_lat_geod_deg': enemy["ego_lat"],  # 纬度
+            'ic_long_gc_deg': 120.0,  # 经度
+            'ic_lat_geod_deg': 60.0,  # 纬度
             'ic_h_sl_ft': enemy["ego_alt"],  # 高度 英尺
-            'ic_psi_true_deg': enemy["ego_heading"],  # 朝向
+            'ic_psi_true_deg': 0,  # 朝向
             'ic_u_fps': enemy["ego_speed"],  # 速度 英尺每秒 243m/s
         })
 
@@ -312,6 +296,7 @@ class SingleCombatEnvShootBack(BaseEnv):
                       "ego_lon": self.current_enemy["ego_lon"],
                       "ego_speed": self.current_enemy["ego_speed"],
                       "ego_heading": self.current_enemy["ego_heading"],
+                      "enm_angle": self.current_enemy["enm_angle"],
 
                       "success": shoot_success,
                       "reward": self.cumulative_reward,

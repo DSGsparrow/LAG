@@ -1,4 +1,11 @@
-# train shoot back 2
+# train shoot back t2
+加上了速度奖励，减小了高度奖励，奖励高度范围也减小了  
+另外这个打弹有点太严了，几千场一次都没打  
+看来这个打弹和机动还必须得适配？  
+可能确实是得把中间奖励去掉？  
+基本上还是挺好的
+
+# train shoot back t
 ~~用shoot back 1的继续训练~~  
 使用transformer模型，因此不再继续训练  
 解决问题：  

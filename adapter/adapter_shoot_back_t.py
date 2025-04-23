@@ -6,8 +6,8 @@ from gymnasium import spaces
 
 import torch.nn.functional as F
 import torch
-
 import logging
+
 
 class ShootControlWrapper(gym.Env):
     def __init__(self, base_env_fn, args):
@@ -23,22 +23,24 @@ class ShootControlWrapper(gym.Env):
 
         self.is_eval = getattr(args, "is_eval", False)
 
-        # 模型加载
-        self.fly_model = PPO.load(args.fly_model_path)
-        self.guide_model = PPO.load(args.guide_model_path)
+        # 加载模型
+        self.fire_model = PPO.load(args.fire_model_path)  # 发射判断模型
+        self.guide_model = PPO.load(args.guide_model_path)  # 发射后导引策略
 
-        # 状态 = (obs + act) * history_len
+        # 状态空间：(obs + act) * history_len
         obs_act_dim = self.raw_obs_dim + self.total_act_dim
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(self.history_len * obs_act_dim,), dtype=np.float32
         )
-        self.action_space = spaces.Box(low=0.0, high=1.0, shape=(self.fire_act_dim,), dtype=np.float32)
+
+        # 训练动作空间来自环境（我们现在训练的是发射前的飞行动作）
+        self.action_space = self.env.action_space
 
         # 缓存
         self.obs_history = deque(maxlen=self.history_len)
         self.act_history = deque(maxlen=self.history_len)
 
-        # 控制逻辑
+        # 状态标志
         self.in_warmup = False
         self.after_launch = False
         self.launch_index = None
@@ -61,52 +63,55 @@ class ShootControlWrapper(gym.Env):
             obs, reward, done, truncated, info = self.env.step(norm_action)
             self.obs_history.append(obs)
             self.act_history.append(self.warmup_action)
-        self.episode_data.append([self._get_observation(), reward, done, truncated, info])
+        self.episode_data.append([self._get_observation(), 0.0, False, False, {}])
 
         return self._get_observation(), {}
 
-    def step(self, fire_action):
-        # 正常阶段
-        fly_action, _ = self.fly_model.predict(self.obs_history[-1], deterministic=True)
-        action = np.concatenate([fly_action, fire_action])
+    def step(self, fly_action):
+        # 使用 fire_model 判断是否发射（输入为历史轨迹）
+        fire_input = self._get_observation()
+        fire_logits, _ = self.fire_model.predict(fire_input, deterministic=True)
+        is_fire = self._fire_decision_from_logits(fire_logits)
 
-        norm_action = self.normalize_action(action, mode='eval' if self.is_eval else 'train')
-        obs, reward, done, truncated, info = self.env.step(norm_action)
+        # 当前整体动作 = [飞行动作 + fire决策（0或1）]
+        full_action = np.concatenate([fly_action, [is_fire]])
+
+        # 执行动作
+        obs, reward, done, truncated, info = self.env.step(full_action)
+
         self.obs_history.append(obs)
-        self.act_history.append(action)
+
+        his_action = np.concatenate([fly_action, fire_logits])
+        self.act_history.append(his_action)
         observation = self._get_observation()
         self.episode_data.append([observation, reward, done, truncated, info])
 
+        # 如果 fire_model 判断需要发射导弹
         if info.get("launch", False):
             self.after_launch = True
             self.launch_index = len(self.episode_data) - 1
 
-            # 立刻进入制导阶段并走到底
+            # 发射后使用 guide_model 控制，直到 episode 结束
             done = False
             while not done:
                 guide_action, _ = self.guide_model.predict(obs, deterministic=True)
-                full_action = np.concatenate([guide_action, np.zeros(1)])
+                guide_full_action = np.concatenate([guide_action, [0.0]])  # 不再发射
+                obs, reward, done, truncated, info = self.env.step(guide_full_action)
 
-                # norm_action = self.normalize_action(full_action, mode='eval' if self.is_eval else 'train')
-
-                obs, reward, done, truncated, info = self.env.step(full_action)
-
-                # 奖励加到打弹那一帧
-                # 打弹后也有奖励
+                # 奖励加到发射动作那一帧
                 if self.launch_index is not None:
                     self.episode_data[self.launch_index][1] += reward
 
-            cumulative_reward = 0
-            for i in range(len(self.episode_data)):
-                cumulative_reward += self.episode_data[i][1]
+            # 记录奖励
+            cumulative_reward = sum(x[1] for x in self.episode_data)
             logging.info("cumulative_reward: " + str(cumulative_reward))
 
+            # 训练应只训练 launch 之前的动作（即 self.launch_index 对应的 fly_action）
             return observation, self.episode_data[self.launch_index][1], True, True, info
 
+        # 正常回合结束
         if done:
-            cumulative_reward = 0
-            for i in range(len(self.episode_data)):
-                cumulative_reward += self.episode_data[i][1]
+            cumulative_reward = sum(x[1] for x in self.episode_data)
             logging.info("cumulative_reward: " + str(cumulative_reward))
 
         return observation, reward, done, truncated, info
@@ -114,6 +119,13 @@ class ShootControlWrapper(gym.Env):
     def _get_observation(self):
         seq = [np.concatenate([o, a], axis=0) for o, a in zip(self.obs_history, self.act_history)]
         return np.concatenate(seq, axis=0)
+
+    def _fire_decision_from_logits(self, logits, temperature=0.5, threshold=0.5):
+        if isinstance(logits, np.ndarray):
+            logits = torch.tensor(logits)
+        probs = F.softmax(logits / temperature, dim=0)
+        act_prob = probs[0].item()
+        return float(act_prob > threshold)
 
     def render(self, *args, **kwargs):
         return self.env.render(*args, **kwargs)
@@ -123,28 +135,25 @@ class ShootControlWrapper(gym.Env):
 
     def normalize_action(self, action, temperature=0.5, threshold=0.5, mode='train'):
         """
-        将网络输出的 action[3] (act score), action[4] (wait score) 合成最终是否打弹的 0/1 决策。
-        前 3 维直接复制，最后一维根据 softmax + 阈值判断是否打弹。
+        用于 reset 阶段的 warmup 动作处理（不用于训练阶段）
         """
         norm_action = np.zeros(4)
         norm_action[0] = action[0]
         norm_action[1] = action[1]
         norm_action[2] = action[2]
 
-        # softmax + 温度
-        logits = torch.tensor([action[3], action[4]])
-        probs = F.softmax(logits / temperature, dim=0)
-        act_prob = probs[0].item()
+        # logits = torch.tensor([action[3], action[4]])
+        # probs = F.softmax(logits / temperature, dim=0)
+        # act_prob = probs[0].item()
+        #
+        # if mode == 'train':
+        #     do_act = threshold < act_prob
+        # else:
+        #     do_act = threshold < act_prob
+        #
+        # norm_action[3] = 1.0 if do_act else 0.0
 
-        if mode == 'train':
-            # do_act = np.random.rand() < act_prob  # 伯努利 随机
-            do_act = threshold < act_prob
-        else:
-            do_act = threshold < act_prob
-
-        norm_action[3] = 1.0 if do_act else 0.0
-
-        if action[3] == action[4] == 0:
-            norm_action[3] = 0.
+        # if action[3] == action[4] == 0:
+        norm_action[3] = 0.0
 
         return norm_action

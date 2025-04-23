@@ -6,6 +6,7 @@ import logging
 from .singlecombat_task import SingleCombatTask, HierarchicalSingleCombatTask
 from ..reward_functions import AltitudeReward, PostureReward, MissilePostureReward, EventDrivenReward, PostureShootReward
 from ..reward_functions import ShootPenaltyReward, ShootGapPenaltyReward, RelativeAltitudeReward, ShootEventDrivenReward
+from ..reward_functions import AltitudeGuideReward, SpeedGuideReward
 from ..termination_conditions import ExtremeState, LowAltitude, Overload, Timeout, DodgeMissileSafeReturn
 from ..termination_conditions import SafeReturn, ShootSafeReturn
 from ..reward_functions import EndAltitudeReward
@@ -105,11 +106,12 @@ class HierarchicalSingleCombatShootMissileBackTask(HierarchicalSingleCombatTask,
 
         self.reward_functions = [
             PostureReward(self.config),
-            AltitudeReward(self.config),
+            # AltitudeReward(self.config),
             ShootEventDrivenReward(self.config),
             ShootPenaltyReward(self.config),
             ShootGapPenaltyReward(self.config),
-            RelativeAltitudeReward(self.config),
+            AltitudeGuideReward(self.config),
+            SpeedGuideReward(self.config),
         ]
 
         self.termination_conditions = [
@@ -124,7 +126,7 @@ class HierarchicalSingleCombatShootMissileBackTask(HierarchicalSingleCombatTask,
         return SingleCombatDodgeMissileTask.load_observation_space(self)
 
     def load_action_space(self):
-        self.action_space = spaces.MultiDiscrete([3, 5, 3, 2])
+        self.action_space = spaces.MultiDiscrete([3, 5, 3])
 
         # return HierarchicalSingleCombatTask.load_action_space(self)
         return self.action_space
