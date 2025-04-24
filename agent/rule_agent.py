@@ -151,3 +151,134 @@ args = Namespace(
 )
 
 agent = RuleBasedCombatAgent(observation_space=..., action_space=..., args=args)
+
+
+
+
+
+
+
+
+import os
+import json
+import random
+import numpy as np
+from stable_baselines3 import PPO
+from typing import List, Dict, Optional
+
+class StrategyPoolManager:
+    def __init__(self, pool_dir="policy_pool", max_size=20):
+        self.pool_dir = pool_dir
+        self.meta_path = os.path.join(pool_dir, "meta.json")
+        os.makedirs(pool_dir, exist_ok=True)
+        self.max_size = max_size
+        self.policies: Dict[str, Dict] = self._load_meta()
+        self.k_factor = 32
+
+    def _load_meta(self):
+        if os.path.exists(self.meta_path):
+            with open(self.meta_path, "r") as f:
+                return json.load(f)
+        return {}
+
+    def _save_meta(self):
+        with open(self.meta_path, "w") as f:
+            json.dump(self.policies, f, indent=2)
+
+    def add_policy(self, policy: PPO, step: int, meta: Optional[Dict] = None):
+        name = f"policy_{step}.zip"
+        path = os.path.join(self.pool_dir, name)
+        policy.save(path)
+        self.policies[name] = meta or {"elo": 1000, "step": step}
+        self._save_meta()
+        self._cleanup()
+
+    def _cleanup(self):
+        if len(self.policies) > self.max_size:
+            sorted_by_step = sorted(self.policies.items(), key=lambda x: x[1]["step"])
+            to_remove, *_ = sorted_by_step
+            os.remove(os.path.join(self.pool_dir, to_remove[0]))
+            del self.policies[to_remove[0]]
+            self._save_meta()
+
+    def sample_opponent(self, mode="uniform", current_elo=1000):
+        names = list(self.policies.keys())
+        elos = np.array([self.policies[name]["elo"] for name in names])
+
+        if mode == "uniform":
+            probs = np.ones(len(names)) / len(names)
+        elif mode == "elo_diff":
+            diffs = np.abs(elos - current_elo)
+            probs = 1.0 / (diffs + 1e-5)
+            probs /= probs.sum()
+        elif mode == "softmax":
+            logits = elos / 100.0
+            probs = np.exp(logits - np.max(logits))
+            probs /= probs.sum()
+        else:
+            raise ValueError("Unknown sampling mode")
+
+        idx = np.random.choice(len(names), p=probs)
+        return PPO.load(os.path.join(self.pool_dir, names[idx])), names[idx]
+
+    def update_elo(self, winner_name: str, loser_name: str):
+        ra = self.policies[winner_name]["elo"]
+        rb = self.policies[loser_name]["elo"]
+        ea = 1 / (1 + 10 ** ((rb - ra) / 400))
+        eb = 1 - ea
+        self.policies[winner_name]["elo"] = ra + self.k_factor * (1 - ea)
+        self.policies[loser_name]["elo"] = rb + self.k_factor * (0 - eb)
+        self._save_meta()
+
+
+class BestResponseTrainer:
+    def __init__(self, env_fn, total_timesteps=100_000):
+        self.env_fn = env_fn
+        self.total_timesteps = total_timesteps
+
+    def train_best_response(self, opponent_policy: PPO):
+        import gymnasium as gym
+        from stable_baselines3.common.env_util import make_vec_env
+
+        class SelfPlayEnv(gym.Env):
+            def __init__(self, base_env_fn, opponent_policy):
+                super().__init__()
+                self.env = base_env_fn()
+                self.opponent = opponent_policy
+                self.observation_space = self.env.observation_space
+                self.action_space = self.env.action_space
+
+            def reset(self, seed=None, options=None):
+                obs, info = self.env.reset()
+                return obs[0], info
+
+            def step(self, action):
+                obs = self.env._get_obs()
+                opp_action, _ = self.opponent.predict(obs[1], deterministic=True)
+                joint_action = [action, opp_action]
+                obs, reward, terminated, truncated, info = self.env.step(joint_action)
+                return obs[0], reward[0], terminated[0], truncated[0], info
+
+        env = SelfPlayEnv(self.env_fn, opponent_policy)
+        model = PPO("MlpPolicy", env, verbose=1)
+        model.learn(total_timesteps=self.total_timesteps)
+        return model
+
+
+if __name__ == "__main__":
+    def make_env():
+        import your_custom_gym_env  # 替换为你的环境导入
+        return your_custom_gym_env.create_env()  # 替换为你的环境构造函数
+
+    pool = StrategyPoolManager(pool_dir="policy_pool")
+    trainer = BestResponseTrainer(env_fn=make_env, total_timesteps=100_000)
+
+    for round_id in range(20):
+        print(f"[PSRO] Round {round_id}")
+        opponent, opp_name = pool.sample_opponent(mode="softmax")
+        best_response = trainer.train_best_response(opponent_policy=opponent)
+        pool.add_policy(best_response, step=round_id)
+        new_name = f"policy_{round_id}.zip"
+        pool.update_elo(winner_name=new_name, loser_name=opp_name)
+        print(f"[PSRO] Added new strategy for round {round_id} and updated Elo\n")
+
