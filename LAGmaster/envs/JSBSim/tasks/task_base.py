@@ -18,6 +18,7 @@ class BaseTask(ABC):
         self.load_variables()
         self.load_observation_space()
         self.load_action_space()
+        self.launch = {}
 
     @property
     def num_agents(self):

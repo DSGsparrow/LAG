@@ -31,9 +31,6 @@ class ShootSafeReturn(BaseTerminationCondition):
         """
         # the current aircraft has crashed
 
-        if env.agents['A0100'].num_left_missiles == 0:
-            info['launch'] = True
-
         if env.agents[agent_id].is_shotdown:
             self.log(f'{agent_id} has been shot down! Total Steps={env.current_step}')
             return True, False, info

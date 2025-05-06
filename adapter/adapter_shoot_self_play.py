@@ -1,3 +1,5 @@
+import copy
+
 import gymnasium as gym
 import numpy as np
 from collections import deque
@@ -48,10 +50,10 @@ class ShootSelfPlayWrapper(gym.Env):
         self.ammo_self = 1
         self.ammo_enemy = 1
 
-        self.warmup_action = np.array(args.warmup_action, dtype=np.float32)
+        self.warmup_action = np.array(args.warmup_action, dtype=np.int32)
 
     def reset(self, **kwargs):
-        obs, _ = self.env.reset(**kwargs)
+        obs = self.env.reset()
         self._clear_buffers()
 
         for _ in range(self.history_len):
@@ -67,28 +69,31 @@ class ShootSelfPlayWrapper(gym.Env):
 
             norm_action_self = self.normalize_action(act_self)
             norm_action_enemy = self.normalize_action(act_enemy)
-            full_action = np.concatenate([norm_action_self, norm_action_enemy])
+            full_action = np.stack([norm_action_self, norm_action_enemy]).astype(int)
 
-            obs, reward, done, truncated, info = self.env.step(full_action)
+            obs, reward, done, info = self.env.step(full_action)
 
-            self.obs_history_self.append(obs)  # todo obs reward done deal
+            truncated = info.get('timeout', False)
+
+            self.obs_history_self.append(obs[0])
             self.act_history_self.append(act_self)
-            self.obs_history_enemy.append(obs)
+            self.obs_history_enemy.append(obs[1])
             self.act_history_enemy.append(act_enemy)
 
             self.episode_data_self.append(
-                [self._get_observation(self.obs_history_self, self.act_history_self), reward, done, truncated, info])
+                [self._get_observation(self.obs_history_self, self.act_history_self), reward[0].item(), done.item(), truncated, info])
             self.episode_data_enemy.append(
-                [self._get_observation(self.obs_history_enemy, self.act_history_enemy), reward, done, truncated, info])
+                [self._get_observation(self.obs_history_enemy, self.act_history_enemy), reward[1].item(), done.item(), truncated, info])
 
-        return {
-            'self_obs': self._get_observation(self.obs_history_self, self.act_history_self),
-            'enemy_obs': self._get_observation(self.obs_history_enemy, self.act_history_enemy)
-        }, {}
+        # return {
+        #     'self_obs': self._get_observation(self.obs_history_self, self.act_history_self),
+        #     'enemy_obs': self._get_observation(self.obs_history_enemy, self.act_history_enemy)
+        # }, {}
+        return self._get_observation(self.obs_history_self, self.act_history_self), {}
 
     def _select_maneuver_model(self, is_self):
         obs = self.obs_history_self[-1] if is_self else self.obs_history_enemy[-1]
-        obs = obs[:-5]
+        # obs = obs[:-5]
         ammo = self.ammo_self if is_self else self.ammo_enemy
         launched = self.after_launch if is_self else self.opponent_after_launch
         other_launched = self.opponent_after_launch if is_self else self.after_launch
@@ -104,39 +109,52 @@ class ShootSelfPlayWrapper(gym.Env):
         else:
             return self.fly_model
 
-    def step(self, fire_action_self):
+    def _predict_maneuver_action(self, model, is_self):
+        if model == self.fly_model:
+            obs_input = self._get_observation(
+                self.obs_history_self, self.act_history_self
+            ) if is_self else self._get_observation(
+                self.obs_history_enemy, self.act_history_enemy
+            )
+        else:
+            obs_input = self.obs_history_self[-1] if is_self else self.obs_history_enemy[-1]
 
+        return model.predict(obs_input, deterministic=True)
+
+    def step(self, fire_action_self):
+        # 机动动作
         maneuver_model_self = self._select_maneuver_model(is_self=True)
         maneuver_model_enemy = self._select_maneuver_model(is_self=False)
 
-        maneuver_obs_self = self._get_observation(self.obs_history_self, self.act_history_self)
-        maneuver_obs_enemy = self._get_observation(self.obs_history_enemy, self.act_history_enemy)
+        maneuver_action_self, _ = self._predict_maneuver_action(maneuver_model_self, is_self=True)
+        maneuver_action_enemy, _ = self._predict_maneuver_action(maneuver_model_enemy, is_self=False)
 
-        maneuver_action_self, _ = maneuver_model_self.predict(maneuver_obs_self, deterministic=True)
+        # 发射动作
+        maneuver_obs_enemy = self._get_observation(self.obs_history_enemy, self.act_history_enemy)
         fire_action_enemy, _ = self.opponent.predict(maneuver_obs_enemy, deterministic=True)
-        maneuver_action_enemy, _ = maneuver_model_enemy.predict(maneuver_obs_enemy, deterministic=True)
 
         act_self = np.concatenate([maneuver_action_self, fire_action_self])
         act_enemy = np.concatenate([maneuver_action_enemy, fire_action_enemy])
 
         norm_action_self = self.normalize_action(act_self)
         norm_action_enemy = self.normalize_action(act_enemy)
-        full_action = np.concatenate([norm_action_self, norm_action_enemy])
+        full_action = np.stack([norm_action_self, norm_action_enemy]).astype(int)
 
-        obs, reward, done, truncated, info = self.env.step(full_action)
+        obs, reward, done, info = self.env.step(full_action)
+        truncated = info.get('timeout', False)
 
-        self.obs_history_self.append(obs)
+        self.obs_history_self.append(obs[0])
         self.act_history_self.append(act_self)
-        self.obs_history_enemy.append(obs)
+        self.obs_history_enemy.append(obs[1])
         self.act_history_enemy.append(act_enemy)
 
         self.episode_data_self.append([
             self._get_observation(self.obs_history_self, self.act_history_self),
-            reward, done, truncated, info
+            reward[0].item(), done.item(), truncated, info
         ])
         self.episode_data_enemy.append([
             self._get_observation(self.obs_history_enemy, self.act_history_enemy),
-            reward, done, truncated, info
+            reward[1].item(), done.item(), truncated, info
         ])
 
         if info.get("launch", False):
@@ -153,33 +171,41 @@ class ShootSelfPlayWrapper(gym.Env):
         if self.after_launch:
             return self._run_until_done()
 
-        return {
-            'self_obs': self._get_observation(self.obs_history_self, self.act_history_self),
-            'enemy_obs': self._get_observation(self.obs_history_enemy, self.act_history_enemy)
-        }, {
-            'self_reward': reward,
-            'enemy_reward': reward,
-            'done': done,
-            'truncated': truncated,
-            'info': info
-        }
+        # return {
+        #     'self_obs': self._get_observation(self.obs_history_self, self.act_history_self),
+        #     'enemy_obs': self._get_observation(self.obs_history_enemy, self.act_history_enemy)
+        # }, {
+        #     'self_reward': reward,
+        #     'enemy_reward': reward,
+        #     'done': done,
+        #     'truncated': truncated,
+        #     'info': info
+        # }
+        return (self.episode_data_self[-1][0], self.episode_data_self[-1][1], self.episode_data_self[-1][2],
+                self.episode_data_self[-1][3], self.episode_data_self[-1][4])
 
     def _run_until_done(self):
         done = False
+        info = {}
         cumulative_reward_self = 0
         cumulative_reward_enemy = 0
 
+        # 保存发射时的状态
+        self_obs_return = copy.deepcopy(self._get_observation(self.obs_history_self, self.act_history_self))
+        enemy_obs_return = copy.deepcopy(self._get_observation(self.obs_history_enemy, self.act_history_enemy))
+
         while not done:
+            # 产生机动动作
             maneuver_model_self = self._select_maneuver_model(is_self=True)
             maneuver_model_enemy = self._select_maneuver_model(is_self=False)
 
-            maneuver_obs_self = self._get_observation(self.obs_history_self, self.act_history_self)
-            maneuver_obs_enemy = self._get_observation(self.obs_history_enemy, self.act_history_enemy)
+            maneuver_action_self, _ = self._predict_maneuver_action(maneuver_model_self, is_self=True)
+            maneuver_action_enemy, _ = self._predict_maneuver_action(maneuver_model_enemy, is_self=False)
 
-            maneuver_action_self, _ = maneuver_model_self.predict(maneuver_obs_self, deterministic=True)
+            # 发射动作
             fire_action_self = np.array([0.0, 0.0], dtype=np.float32)
 
-            maneuver_action_enemy, _ = maneuver_model_enemy.predict(maneuver_obs_enemy, deterministic=True)
+            maneuver_obs_enemy = self._get_observation(self.obs_history_enemy, self.act_history_enemy)
             fire_action_enemy, _ = self.opponent.predict(maneuver_obs_enemy, deterministic=True)
 
             act_self = np.concatenate([maneuver_action_self, fire_action_self])
@@ -187,19 +213,22 @@ class ShootSelfPlayWrapper(gym.Env):
 
             norm_action_self = self.normalize_action(act_self)
             norm_action_enemy = self.normalize_action(act_enemy)
-            full_action = np.concatenate([norm_action_self, norm_action_enemy])
+            full_action = np.stack([norm_action_self, norm_action_enemy]).astype(int)
 
-            obs, reward, done, truncated, info = self.env.step(full_action)
+            obs, reward, done, info = self.env.step(full_action)
+            truncated = info.get('timeout', False)
 
-            self.obs_history_self.append(obs)
+            self.obs_history_self.append(obs[0])
             self.act_history_self.append(act_self)
-            self.obs_history_enemy.append(obs)
+            self.obs_history_enemy.append(obs[1])
             self.act_history_enemy.append(act_enemy)
 
             if self.launch_index is not None:
-                cumulative_reward_self += reward
+                cumulative_reward_self += reward[0].item()
+            # todo enemy reward calculate wrong
+            # after enemy shoots enemy should stop cumulative
             if self.opponent_launch_index is not None:
-                cumulative_reward_enemy += reward
+                cumulative_reward_enemy += reward[1].item()
 
             if info.get("opponent_launch", False):
                 self.opponent_after_launch = True
@@ -214,16 +243,17 @@ class ShootSelfPlayWrapper(gym.Env):
         logging.info("cumulative_reward_self: " + str(cumulative_reward_self))
         logging.info("cumulative_reward_enemy: " + str(cumulative_reward_enemy))
 
-        return {
-            'self_obs': self._get_observation(self.obs_history_self, self.act_history_self),
-            'enemy_obs': self._get_observation(self.obs_history_enemy, self.act_history_enemy)
-        }, {
-            'self_reward': self.episode_data_self[self.launch_index][1],
-            'enemy_reward': self.episode_data_enemy[self.opponent_launch_index][1],
-            'done': True,
-            'truncated': True,
-            'info': info
-        }
+        # return {
+        #     'self_obs': self_obs_return,
+        #     'enemy_obs': enemy_obs_return
+        # }, {
+        #     'self_reward': self.episode_data_self[self.launch_index][1],
+        #     'enemy_reward': self.episode_data_enemy[self.opponent_launch_index][1],
+        #     'done': True,
+        #     'truncated': True,
+        #     'info': info
+        # }
+        return self_obs_return, self.episode_data_self[self.launch_index][1], True, True, info
 
     def _get_observation(self, obs_history, act_history):
         seq = [np.concatenate([o, a], axis=0) for o, a in zip(obs_history, act_history)]

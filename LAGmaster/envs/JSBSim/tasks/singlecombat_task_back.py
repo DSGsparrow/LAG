@@ -182,6 +182,7 @@ class HierarchicalSingleCombatShootMissileBackTask(HierarchicalSingleCombatTask,
     def reset(self, env):
         self._shoot_action = {agent_id: 0 for agent_id in env.agents.keys()}
         self._inner_rnn_states = {agent_id: np.zeros((1, 1, 128)) for agent_id in env.agents.keys()}
+        self.launch = {agent_id: False for agent_id in env.agents.keys()}
         return SingleCombatDodgeMissileTask.reset(self, env)
 
     def step(self, env):
@@ -192,11 +193,13 @@ class HierarchicalSingleCombatShootMissileBackTask(HierarchicalSingleCombatTask,
 
             obs = self.get_obs(env, agent_id)
             state = self.get_states(env, agent_id)
+            self.launch[agent_id] = False
 
             if shoot_flag:
                 new_missile_uid = agent_id + str(self.remaining_missiles[agent_id])
                 env.add_temp_simulator(
                     MissileSimulator.create(parent=agent, target=agent.enemies[0], uid=new_missile_uid))
                 self.remaining_missiles[agent_id] -= 1
+                self.launch[agent_id] = True
                 logging.info(f'{agent_id} launch mission! '
                              f'Total Steps={env.current_step}, obs={obs}, state={state}, current_reward={env.cumulative_reward}')
