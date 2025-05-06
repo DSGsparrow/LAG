@@ -13,7 +13,8 @@ from utils.init_state import my_aircraft, calculate_enemy_position
 
 from .env_base import BaseEnv
 from ..tasks import SingleCombatTask, SingleCombatDodgeMissileTask, HierarchicalSingleCombatDodgeMissileTask, \
-    HierarchicalSingleCombatShootTask, SingleCombatShootMissileTask, HierarchicalSingleCombatTask
+    HierarchicalSingleCombatShootTask, SingleCombatShootMissileTask, HierarchicalSingleCombatTask, \
+    HierarchicalSingleCombatDodgeUnknownMissileTask
 from ..human_task.HumanSingleCombatTask import  HumanSingleCombatTask
 
 
@@ -120,6 +121,10 @@ class SingleCombatEnvDodge(BaseEnv):
         self.episode_counter = 0
         self.success_queue = deque(maxlen=100)  # 最近100局命中情况
 
+        # additional steps
+        self.add_step_len = getattr(self.config, 'add_step_len', 20)
+        self.add_step = 0
+
     def load_task(self):
         taskname = getattr(self.config, 'task', None)
         if taskname == 'singlecombat':
@@ -132,6 +137,8 @@ class SingleCombatEnvDodge(BaseEnv):
             self.task = SingleCombatShootMissileTask(self.config)
         elif taskname == 'hierarchical_singlecombat_dodge_missile':
             self.task = HierarchicalSingleCombatDodgeMissileTask(self.config)
+        elif taskname == 'hierarchical_singlecombat_dodge_unknown_missile':
+            self.task = HierarchicalSingleCombatDodgeUnknownMissileTask(self.config)
         elif taskname == 'hierarchical_singlecombat_shoot':
             self.task = HierarchicalSingleCombatShootTask(self.config)
         elif taskname == 'HumanSingleCombat':
@@ -145,10 +152,12 @@ class SingleCombatEnvDodge(BaseEnv):
         init_ego_speed = self.np_random.uniform(400., 1000.)
         init_ego_heading = self.np_random.uniform(0., 360.)
         init_enm_alt = self.np_random.uniform(14000., 30000.)
-        init_enm_speed = self.np_random.uniform(400., 1000.)
+        init_enm_speed = self.np_random.uniform(400., 1200.)
         init_enm_heading = self.np_random.uniform(0., 360.)
-        init_enm_distance = self.np_random.uniform(6000., 20000.)
-        init_enm_angle = self.np_random.uniform(0., 360.)
+        init_enm_distance = self.np_random.uniform(4000., 20000.)
+        init_enm_angle = init_enm_heading + 180
+        if init_enm_angle > 360:
+            init_enm_angle -= 360
 
         init_enm_lat, init_enm_lon = calculate_enemy_position(init_enm_distance, init_enm_angle)
 
@@ -176,6 +185,7 @@ class SingleCombatEnvDodge(BaseEnv):
         obs = self.get_obs()
         self._create_records = False
         self.render_file = get_unique_filename(self.env_id, self.enm_ver, self.render_path)
+        self.add_step = 0
         return self._pack(obs)
 
     def reset_simulators(self, enemy):
@@ -243,6 +253,14 @@ class SingleCombatEnvDodge(BaseEnv):
         dones = {}
         for agent_id in self.agents.keys():
             done, info = self.task.get_termination(self, agent_id, info)
+            # additional steps
+            if done:
+                if info.get("dodge success", False):
+                    done = False
+                    self.add_step += 1
+                    if self.add_step >= self.add_step_len:
+                        done = True
+                        logging.info(f'{agent_id} dodge succeeded! Total Steps={self.current_step}')
             dones[agent_id] = [done]
 
         rewards = {}

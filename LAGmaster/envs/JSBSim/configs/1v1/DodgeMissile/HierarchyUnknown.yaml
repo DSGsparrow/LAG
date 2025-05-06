@@ -1,9 +1,12 @@
 # task config
-task: hierarchical_singlecombat_dodge_missile
+task: hierarchical_singlecombat_dodge_unknown_missile
 
 # file path
-render_path: "./test_result/render/dodge2_vs_shoot_imi"
-enm_ver: "shoot_imi"
+render_path: "./render_train/dodge_unknown"
+enm_ver: "shoot_teacher"
+
+# additional episode length
+add_step_len: 20
 
 # simulation config
 sim_freq: 60
@@ -69,4 +72,4 @@ AltitudeReward_Kv: 0.2
 EventDrivenReward_scale: 1
 EventDrivenReward_potential: true
 
-EndAltitudeReward_scale: 5.0
+EndAltitudeReward_scale: 10.0

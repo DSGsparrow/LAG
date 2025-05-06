@@ -1,6 +1,8 @@
 import gymnasium
 from gymnasium import spaces
 import numpy as np
+import logging
+from collections import deque
 
 from LAGmaster.envs.JSBSim.envs import SingleCombatEnv, SingleControlEnv, SingleCombatEnvShoot, SingleCombatEnvDodge
 
@@ -16,6 +18,8 @@ class SB3SingleCombatEnv(gymnasium.Env):
         # act_shape = self.env.get_action_space().shape[0]  # 获取动作空间维度
         # 继承原始环境的动作空间和观察空间
         # self.action_space = self.env.action_space
+        self.episode_num = 0
+        self.win_num = 0
 
         # 提取原始环境的 action_space
         if isinstance(self.env.action_space, spaces.Tuple):
@@ -58,6 +62,13 @@ class SB3SingleCombatEnv(gymnasium.Env):
         observation, reward, terminated, truncated, info = obs[0], rewards.item(), dones.item(), timeout, info
 
         # logging.info('test')
+        if terminated or truncated:
+            self.episode_num += 1
+            shoot_success = info.get("dodge success", False)
+            if shoot_success:
+                self.win_num += 1
+            logging.info(
+                f'test {self.episode_num} episode, dodge {self.win_num} times, win rate is{self.win_num / self.episode_num * 100}%')
 
         return observation, reward, terminated, truncated, info
 
@@ -73,3 +84,80 @@ class SB3SingleCombatEnv(gymnasium.Env):
 
     def render(self, mode="txt", filepath='./JSBSimRecording.txt.acmi', tacview=None):
         self.env.render(mode=mode, filepath=filepath, tacview=tacview)
+
+
+
+class DodgeControlWrapper(gymnasium.Env):
+    def __init__(self, base_env_fn, args):
+        super().__init__()
+        self.env = base_env_fn()
+
+        # 参数配置
+        self.history_len = args.history_len
+        self.raw_obs_dim = args.raw_obs_dim
+        self.action_dim = args.action_dim  # 躲弹动作维度（例如飞行动作维度）
+
+        # 状态空间：(obs + act) * history_len
+        obs_act_dim = self.raw_obs_dim + self.action_dim
+        self.observation_space = spaces.Box(
+            low=-np.inf, high=np.inf, shape=(self.history_len * obs_act_dim,), dtype=np.float32
+        )
+
+        # 动作空间直接来自底层环境
+        self.action_space = self.env.action_space
+
+        # 历史轨迹缓存
+        self.obs_history = deque(maxlen=self.history_len)
+        self.act_history = deque(maxlen=self.history_len)
+
+        # 初始 warmup 动作
+        self.warmup_action = np.array(args.warmup_action, dtype=np.int32)
+
+    def reset(self, **kwargs):
+        obs, _ = self.env.reset(**kwargs)
+        self.obs_history.clear()
+        self.act_history.clear()
+
+        # Warmup 动作执行，填充历史状态动作
+        for _ in range(self.history_len):
+            obs, reward, done, truncated, info = self.env.step(self.warmup_action)
+            self.obs_history.append(obs)
+            self.act_history.append(self.warmup_action)
+
+        return self._get_observation(), {}
+
+    def step(self, action):
+        obs, reward, done, truncated, info = self.env.step(action)
+
+        self.obs_history.append(obs)
+        self.act_history.append(action)
+
+        observation = self._get_observation()
+        return observation, reward, done, truncated, info
+
+    def _get_observation(self):
+        seq = [np.concatenate([o, a], axis=0) for o, a in zip(self.obs_history, self.act_history)]
+        return np.concatenate(seq, axis=0)
+
+    def render(self, *args, **kwargs):
+        return self.env.render(*args, **kwargs)
+
+    def close(self):
+        self.env.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

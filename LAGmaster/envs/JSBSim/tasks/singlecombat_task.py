@@ -1177,7 +1177,7 @@ class ShootImitationAgent:
         super().__init__()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model_path_self = 'trained_model/imitation_shoot/imitation_pretrained.zip'
+        # self.model_path_self = 'trained_model/imitation_shoot/imitation_pretrained.zip'
 
         self.model = ImitationPolicy(21).to(self.device)
 

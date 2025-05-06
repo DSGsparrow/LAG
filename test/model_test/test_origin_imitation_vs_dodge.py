@@ -8,7 +8,8 @@ from argparse import Namespace
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
-from adapter.adapter_shoot_back import SB3SingleCombatEnv
+# from adapter.adapter_shoot_back import SB3SingleCombatEnv
+from adapter.adapter_dodge_missile import SB3SingleCombatEnv
 from net.net_shoot_imitation import CustomImitationPolicy, MLPBase, GRULayer
 from utils.shoot_rule import fuzzy_should_attack
 
@@ -261,15 +262,15 @@ if __name__ == "__main__":
     # 1, change args: model path, config name, output_dir
     # 2, yaml: render path, baselines
     args3 = Namespace(
-        config_name='1v1/ShootMissile/HierarchyVsBaselineShootBack',
-        model_path='./trained_model/shoot_back/ppo_air_combat.zip',
-        log_file='./test_result/log/test_shoot_back_vs_dodge4_2.log',
+        config_name='1v1/DodgeMissile/HierarchyVsBaselineSelf',
+        model_path='./trained_model/dodge_missile/ppo_air_combat_dodge2.zip',
+        log_file='./test_result/log/test_dodge2_vs_shoot_imi.log',
         save_path='./test_result/expert_data',
         save_npz=True,
-        num_envs=16,
+        num_envs=1,
         max_steps=50_001,
     )
-    main_save_npz(args3)
+    main(args3)
 
 
     # # 调用第一个模型（模仿学习 .pt）
