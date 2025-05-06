@@ -14,7 +14,7 @@ from utils.init_state import my_aircraft, calculate_enemy_position
 from .env_base import BaseEnv
 from ..tasks import SingleCombatTask, SingleCombatDodgeMissileTask, HierarchicalSingleCombatDodgeMissileTask, \
     HierarchicalSingleCombatShootTask, SingleCombatShootMissileTask, HierarchicalSingleCombatTask, \
-    HierarchicalSingleCombatDodgeUnknownMissileTask
+    HierarchicalSingleCombatDodgeUnknownMissileTask, HierarchicalSingleCombatDodgeKnownMissileTask
 from ..human_task.HumanSingleCombatTask import  HumanSingleCombatTask
 
 
@@ -139,6 +139,8 @@ class SingleCombatEnvDodge(BaseEnv):
             self.task = HierarchicalSingleCombatDodgeMissileTask(self.config)
         elif taskname == 'hierarchical_singlecombat_dodge_unknown_missile':
             self.task = HierarchicalSingleCombatDodgeUnknownMissileTask(self.config)
+        elif taskname == 'hierarchical_singlecombat_dodge_known_missile':
+            self.task = HierarchicalSingleCombatDodgeKnownMissileTask(self.config)
         elif taskname == 'hierarchical_singlecombat_shoot':
             self.task = HierarchicalSingleCombatShootTask(self.config)
         elif taskname == 'HumanSingleCombat':
@@ -154,7 +156,7 @@ class SingleCombatEnvDodge(BaseEnv):
         init_enm_alt = self.np_random.uniform(14000., 30000.)
         init_enm_speed = self.np_random.uniform(400., 1200.)
         init_enm_heading = self.np_random.uniform(0., 360.)
-        init_enm_distance = self.np_random.uniform(4000., 20000.)
+        init_enm_distance = self.np_random.uniform(4000., 9000.)  # 米
         init_enm_angle = init_enm_heading + 180
         if init_enm_angle > 360:
             init_enm_angle -= 360

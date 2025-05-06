@@ -2,7 +2,7 @@
 task: hierarchical_singlecombat_dodge_unknown_missile
 
 # file path
-render_path: "./render_train/dodge_unknown"
+render_path: "./render_train/dodge_unknown3"
 enm_ver: "shoot_teacher"
 
 # additional episode length

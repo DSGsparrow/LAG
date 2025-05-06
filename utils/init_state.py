@@ -2,6 +2,7 @@ import numpy as np
 import random
 import math
 import geopy.distance
+from geopy.distance import geodesic
 
 
 # 设置参数
@@ -18,6 +19,12 @@ def calculate_enemy_position(distance, angle):
     origin = (my_aircraft["lat"], my_aircraft["lon"])
     destination = geopy.distance.distance(meters=distance).destination(origin, angle)
     return destination.latitude, destination.longitude  # 纬度，经度
+
+
+if __name__ == "__main__":
+    lat, lon = calculate_enemy_position(10000, 0)
+    distance = geodesic((lat, lon), (60, 120)).meters
+    print(distance)
 
 
 def random_init_state(radius_inner = 9000, radius_outer = 14000):

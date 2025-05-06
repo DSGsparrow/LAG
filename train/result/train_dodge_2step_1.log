@@ -1,0 +1,6 @@
+2025-05-06 16:36:55,406 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_dodge_2step_1.log
+2025-05-06 16:36:55,457 - INFO [ENV 0] - render txt name:./render_train/dodge_known\env_0_shoot_teacher_45.txt.acmi
+2025-05-06 16:36:55,491 - INFO [ENV 1] - Logger for ENV 1 initialized, log path: ./train/result/train_dodge_2step_1.log
+2025-05-06 16:36:55,544 - INFO [ENV 1] - render txt name:./render_train/dodge_known\env_1_shoot_teacher.txt.acmi
+2025-05-06 16:36:55,652 - INFO [ENV 2] - Logger for ENV 2 initialized, log path: ./train/result/train_dodge_2step_1.log
+2025-05-06 16:36:55,694 - INFO [ENV 2] - render txt name:./render_train/dodge_known\env_2_shoot_teacher.txt.acmi
