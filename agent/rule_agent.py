@@ -1,284 +1,210 @@
 import numpy as np
+import logging
 import torch
 import torch.nn.functional as F
 from collections import deque
 from dataclasses import dataclass
+from argparse import Namespace
+
+from stable_baselines3 import PPO
 from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3.common.type_aliases import GymObs
 from stable_baselines3.common.utils import obs_as_tensor
+from stable_baselines3.common.vec_env import SubprocVecEnv
+
+from adapter.adapter_shoot_self_play import SelfPlayDodgeWrapper
+from LAGmaster.envs.JSBSim.envs.singlecombat_env_shoot_selfplay import SingleCombatEnvShootSelfPlay
 
 
 class RuleBasedCombatAgent(BasePolicy):
-    def __init__(self, observation_space, action_space, args, **kwargs):
+    def __init__(self, observation_space, action_space, args: Namespace, **kwargs):
         super().__init__(observation_space, action_space)
 
-        from stable_baselines3 import PPO
-        self.shoot_agent = PPO.load(args.shoot_model_path)
-        self.guide_agent = PPO.load(args.guide_model_path)
-        self.dodge_agent = PPO.load(args.dodge_model_path)
         self.counter_agent = PPO.load(args.counter_model_path)
+        self.dodge_agent = PPO.load(args.dodge_model_path)
+        self.guide_agent = PPO.load(args.guide_model_path)
         self.fire_decision_agent = PPO.load(args.fire_decision_model_path)
 
         self.history_len = args.history_len
-        self.obs_dim = args.obs_dim
-        self.act_dim = args.act_dim
+        self.obs_dim = args.raw_obs_dim
+        self.act_dim = args.action_dim
         self.fly_act_dim = args.fly_act_dim
         self.fire_act_dim = args.fire_act_dim
-        self.agent_id = args.agent_id
         self.debug = args.debug
         self.initial_missile_num = args.missile_num
 
-        # 并行环境支持（每个环境一个状态）
-        self.env_state = {}  # key: env index, value: dict with histories & flags
+        self.env_state = {}
 
     def reset(self, env_idx):
         self.env_state[env_idx] = {
-            "ego_has_fired": False,
-            "first_strike_done": False,
             "remaining_missiles": self.initial_missile_num,
-            "obs_history": deque(maxlen=self.history_len),
-            "act_history": deque(maxlen=self.history_len),
+            "opponent_missile_in_air": False,
+            "ego_has_fired": False
         }
 
-    def _normalize_action(self, action_3d):
-        return np.clip(action_3d / 5.0, -1.0, 1.0)
+    def normalize_fire_action(self, action, temperature=0.5, threshold=0.3):
+        logits = torch.tensor([action[0], action[1]])
+        probs = F.softmax(logits / temperature, dim=0)
+        act_prob = probs[0].item()
+        do_act = act_prob > threshold
+        return 1.0 if do_act else 0.0
 
     def _enemy_has_fired(self, obs):
-        return not np.allclose(obs[15:21], 0.0)
+        return not np.allclose(obs[-5:], 0.0)
 
-    def _construct_fire_decision_obs(self, state):
-        if len(state["obs_history"]) < self.history_len:
-            return None
-        seq = [np.concatenate([o, a], axis=0) for o, a in zip(state["obs_history"], state["act_history"])]
-        return np.concatenate(seq, axis=0).astype(np.float32)
+    def _update_enemy_missile_flag(self, state, obs):
+        state["opponent_missile_in_air"] = self._enemy_has_fired(obs)
 
-    def _determine_stage(self, obs, state):
-        enemy_fired = self._enemy_has_fired(obs)
-        if enemy_fired:
-            return "DODGE"
-        if state["ego_has_fired"] and state["remaining_missiles"] > 0:
-            return "COUNTER"
-        if state["ego_has_fired"]:
-            return "GUIDE"
-        if state["first_strike_done"] and state["remaining_missiles"] > 0:
-            return "COUNTER"
-        if state["remaining_missiles"] == 0:
-            return "DODGE"
-        return "ENGAGE"
-
-    def predict(self, observation: GymObs, state=None, episode_start=None, deterministic=True):
+    def _predict(self, observation, state=None, episode_start=None, deterministic=True):
         if observation.ndim == 1:
             observation = observation[None, :]
 
         actions = []
-        for env_idx, obs in enumerate(observation):
-            if env_idx not in self.env_state:
+
+        for env_idx, obs_seq in enumerate(observation):
+            # todo 还是有问题，这个现在用法和多环境冲突了，还是得再看一下
+            if state is not None and isinstance(state, (list, tuple)) and state[env_idx] == True:
                 self.reset(env_idx)
+            elif env_idx not in self.env_state:
+                self.reset(env_idx)
+
             s = self.env_state[env_idx]
 
-            stage = self._determine_stage(obs, s)
-            fire_decision_obs = self._construct_fire_decision_obs(s)
-            fire_decision = False
-            fire_prob = 0.0
+            obs_latest = obs_seq[:self.obs_dim]
+            self._update_enemy_missile_flag(s, obs_latest)
 
-            if fire_decision_obs is not None:
-                score = self.fire_decision_agent.predict(fire_decision_obs, deterministic=True)[0]
-                logits = torch.tensor([score[3], score[4]])
-                probs = F.softmax(logits / 0.5, dim=0)
-                fire_prob = probs[0].item()
-                fire_decision = fire_prob > 0.5
+            # fire decision uses sequence directly
+            fire_decision = 0.0
+            if len(obs_seq) == self.history_len * (self.obs_dim + self.act_dim):
+                fire_logits, _ = self.fire_decision_agent.predict(obs_seq, deterministic=True)
+                fire_decision = self.normalize_fire_action(fire_logits)
 
-            if self.debug:
-                print(f"[Agent {self.agent_id} | Env {env_idx}] Stage: {stage} | FireProb: {fire_prob:.3f} | Missiles Left: {s['remaining_missiles']}")
-
-            if stage == "ENGAGE":
-                shoot_action = self.shoot_agent.predict(obs, deterministic=True)[0]
-                action = shoot_action.copy()
-                should_fire = (
-                    (shoot_action[4] > 0.5 or fire_decision)
-                    and not s["first_strike_done"] and s["remaining_missiles"] > 0
-                )
-                if should_fire:
-                    s["first_strike_done"] = True
-                    s["ego_has_fired"] = True
-                    s["remaining_missiles"] -= 1
-                action[4] = 1.0 if should_fire else 0.0
-
-            elif stage == "GUIDE":
-                raw = self.guide_agent.predict(obs, deterministic=True)[0]
-                action = np.concatenate([self._normalize_action(raw), [0.0]])
-
-            elif stage == "DODGE":
-                raw = self.dodge_agent.predict(obs, deterministic=True)[0]
-                action = np.concatenate([self._normalize_action(raw), [0.0]])
-
-            elif stage == "COUNTER":
-                raw = self.counter_agent.predict(obs, deterministic=True)[0]
-                action = np.concatenate([self._normalize_action(raw), [0.0]])
-
+            # determine stage
+            if s["ego_has_fired"]:
+                stage = "GUIDE"
+            elif s["opponent_missile_in_air"]:
+                stage = "DODGE"
+            elif s["remaining_missiles"] == 0:
+                stage = "GUIDE"
             else:
-                action = np.zeros(5)
+                stage = "COUNTER"
 
-            if stage != "ENGAGE" and fire_decision and s["remaining_missiles"] > 0:
-                action[4] = 1.0
+            # select model input
+            if stage == "COUNTER":
+                act, _ = self.counter_agent.predict(obs_seq, deterministic=True)
+            elif stage == "DODGE":
+                act, _ = self.dodge_agent.predict(obs_latest, deterministic=True)
+            elif stage == "GUIDE":
+                act, _ = self.guide_agent.predict(obs_latest, deterministic=True)
+            else:
+                act = np.zeros(self.fly_act_dim)
+
+            # combine action
+            full_action = np.zeros(self.fly_act_dim + self.fire_act_dim)
+            full_action[:self.fly_act_dim] = act[:self.fly_act_dim]
+            full_action[self.fly_act_dim:] = fire_logits
+
+            # update missile state
+            if fire_decision > 0.3 and s["remaining_missiles"] > 0:
                 s["ego_has_fired"] = True
                 s["remaining_missiles"] -= 1
 
-            s["obs_history"].append(obs)
-            s["act_history"].append(action)
+            actions.append(full_action)
 
-            actions.append(action)
-
-        return np.array(actions), None
-
-
-from argparse import Namespace
-
-args = Namespace(
-    shoot_model_path="trained_model/shoot_imitation/ppo_air_combat_imi.zip",
-    guide_model_path="trained_model/guide/ppo_air_combat.zip",
-    dodge_model_path="trained_model/dodge_missile/ppo_air_combat_dodge4.zip",
-    counter_model_path="trained_model/shoot_back/ppo_air_combat.zip",
-    fire_decision_model_path="trained_model/shoot_solo5/ppo_air_combat.zip",
-    history_len=5,
-    obs_dim=21,
-    act_dim=5,
-    fly_act_dim=4,
-    fire_act_dim=1,
-    missile_num=2,
-    agent_id=0,
-    debug=True
-)
-
-agent = RuleBasedCombatAgent(observation_space=..., action_space=..., args=args)
+        return np.array([actions]), None  # 再包一层是环境的
 
 
 
+class EnvIDFilter(logging.Filter):
+    def __init__(self, env_id):
+        super().__init__()
+        self.env_id = env_id
+
+    def filter(self, record):
+        record.env_id = f"{self.env_id}"
+        return True
 
 
+def setup_logging(env_id=0, log_file=None):
+    """配置 logging，让日志既输出到终端，又写入文件，标明 ENV ID"""
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.handlers.clear()
+
+    # 创建 Filter，用于注入 env_id
+    env_filter = EnvIDFilter(env_id)
+
+    # 日志格式带 env_id
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s [ENV %(env_id)s] - %(message)s")
+
+    # 终端 handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+    console_handler.addFilter(env_filter)
+
+    # 文件 handler
+    file_handler = logging.FileHandler(log_file, mode="a")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    file_handler.addFilter(env_filter)
+
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+
+    logging.info(f"Logger for ENV {env_id} initialized, log path: {log_file}")
 
 
-
-import os
-import json
-import random
-import numpy as np
-from stable_baselines3 import PPO
-from typing import List, Dict, Optional
-
-class StrategyPoolManager:
-    def __init__(self, pool_dir="policy_pool", max_size=20):
-        self.pool_dir = pool_dir
-        self.meta_path = os.path.join(pool_dir, "meta.json")
-        os.makedirs(pool_dir, exist_ok=True)
-        self.max_size = max_size
-        self.policies: Dict[str, Dict] = self._load_meta()
-        self.k_factor = 32
-
-    def _load_meta(self):
-        if os.path.exists(self.meta_path):
-            with open(self.meta_path, "r") as f:
-                return json.load(f)
-        return {}
-
-    def _save_meta(self):
-        with open(self.meta_path, "w") as f:
-            json.dump(self.policies, f, indent=2)
-
-    def add_policy(self, policy: PPO, step: int, meta: Optional[Dict] = None):
-        name = f"policy_{step}.zip"
-        path = os.path.join(self.pool_dir, name)
-        policy.save(path)
-        self.policies[name] = meta or {"elo": 1000, "step": step}
-        self._save_meta()
-        self._cleanup()
-
-    def _cleanup(self):
-        if len(self.policies) > self.max_size:
-            sorted_by_step = sorted(self.policies.items(), key=lambda x: x[1]["step"])
-            to_remove, *_ = sorted_by_step
-            os.remove(os.path.join(self.pool_dir, to_remove[0]))
-            del self.policies[to_remove[0]]
-            self._save_meta()
-
-    def sample_opponent(self, mode="uniform", current_elo=1000):
-        names = list(self.policies.keys())
-        elos = np.array([self.policies[name]["elo"] for name in names])
-
-        if mode == "uniform":
-            probs = np.ones(len(names)) / len(names)
-        elif mode == "elo_diff":
-            diffs = np.abs(elos - current_elo)
-            probs = 1.0 / (diffs + 1e-5)
-            probs /= probs.sum()
-        elif mode == "softmax":
-            logits = elos / 100.0
-            probs = np.exp(logits - np.max(logits))
-            probs /= probs.sum()
-        else:
-            raise ValueError("Unknown sampling mode")
-
-        idx = np.random.choice(len(names), p=probs)
-        return PPO.load(os.path.join(self.pool_dir, names[idx])), names[idx]
-
-    def update_elo(self, winner_name: str, loser_name: str):
-        ra = self.policies[winner_name]["elo"]
-        rb = self.policies[loser_name]["elo"]
-        ea = 1 / (1 + 10 ** ((rb - ra) / 400))
-        eb = 1 - ea
-        self.policies[winner_name]["elo"] = ra + self.k_factor * (1 - ea)
-        self.policies[loser_name]["elo"] = rb + self.k_factor * (0 - eb)
-        self._save_meta()
-
-
-class BestResponseTrainer:
-    def __init__(self, env_fn, total_timesteps=100_000):
-        self.env_fn = env_fn
-        self.total_timesteps = total_timesteps
-
-    def train_best_response(self, opponent_policy: PPO):
-        import gymnasium as gym
-        from stable_baselines3.common.env_util import make_vec_env
-
-        class SelfPlayEnv(gym.Env):
-            def __init__(self, base_env_fn, opponent_policy):
-                super().__init__()
-                self.env = base_env_fn()
-                self.opponent = opponent_policy
-                self.observation_space = self.env.observation_space
-                self.action_space = self.env.action_space
-
-            def reset(self, seed=None, options=None):
-                obs, info = self.env.reset()
-                return obs[0], info
-
-            def step(self, action):
-                obs = self.env._get_obs()
-                opp_action, _ = self.opponent.predict(obs[1], deterministic=True)
-                joint_action = [action, opp_action]
-                obs, reward, terminated, truncated, info = self.env.step(joint_action)
-                return obs[0], reward[0], terminated[0], truncated[0], info
-
-        env = SelfPlayEnv(self.env_fn, opponent_policy)
-        model = PPO("MlpPolicy", env, verbose=1)
-        model.learn(total_timesteps=self.total_timesteps)
-        return model
+def make_env(env_id, args):
+    setup_logging(env_id, args.log_file)
+    return SelfPlayDodgeWrapper(lambda: SingleCombatEnvShootSelfPlay(config_name=args.config, env_id=env_id), args)
 
 
 if __name__ == "__main__":
-    def make_env():
-        import your_custom_gym_env  # 替换为你的环境导入
-        return your_custom_gym_env.create_env()  # 替换为你的环境构造函数
+    args = Namespace(
+        shoot_model_path="trained_model/shoot_imitation/ppo_air_combat_imi.zip",
+        guide_model_path="trained_model/guide/ppo_air_combat.zip",
+        dodge_model_path="trained_model/dodge_missile/ppo_air_combat_dodge4.zip",
+        counter_model_path="trained_model/shoot_back_t2/ppo_air_combat.zip",
+        fire_decision_model_path="trained_model/shoot_solo5/ppo_air_combat.zip",
+        log_file="selfplay.log",
+        history_len=10,
+        raw_obs_dim=21,
+        action_dim=5,
+        fly_act_dim=3,
+        fire_act_dim=2,
+        missile_num=1,
+        agent_id=0,
+        debug=True,
+        num_envs=1,
+        config="1v1/ShootMissile/HierarchySelfplayShoot",
+        max_steps=1000000,
+        warmup_action=[1, 2, 1, 0, 0]
+    )
 
-    pool = StrategyPoolManager(pool_dir="policy_pool")
-    trainer = BestResponseTrainer(env_fn=make_env, total_timesteps=100_000)
+    env_fns = [lambda env_id=i: make_env(env_id, args) for i in range(args.num_envs)]
+    env = SubprocVecEnv(env_fns)
 
-    for round_id in range(20):
-        print(f"[PSRO] Round {round_id}")
-        opponent, opp_name = pool.sample_opponent(mode="softmax")
-        best_response = trainer.train_best_response(opponent_policy=opponent)
-        pool.add_policy(best_response, step=round_id)
-        new_name = f"policy_{round_id}.zip"
-        pool.update_elo(winner_name=new_name, loser_name=opp_name)
-        print(f"[PSRO] Added new strategy for round {round_id} and updated Elo\n")
+    agent = RuleBasedCombatAgent(observation_space=env.observation_space, action_space=env.action_space, args=args)
+    # agent1 = RuleBasedCombatAgent(observation_space=env.observation_space, action_space=env.action_space, args=args)
+
+    obs = env.reset()
+    dones = [False, False]
+    for step in range(args.max_steps):
+        action, _ = agent._predict(obs[0], state=dones, deterministic=True)
+        # action1, _ = agent1._predict(obs[1], deterministic=True)
+
+        obs, rewards, dones, infos = env.step(action)
+
+        if dones[0]:
+            print('agent0 rewards', env.get_attr('total_rewards')[0][0],
+                  'agent1 rewards', env.get_attr('total_rewards')[0][1],)
+
+    env.close()
+    print("🎯 推理完成")
+
+
+
+
+
 

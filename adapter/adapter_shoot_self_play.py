@@ -1,5 +1,5 @@
 import copy
-
+import gymnasium
 import gymnasium as gym
 import numpy as np
 from collections import deque
@@ -293,3 +293,108 @@ class ShootSelfPlayWrapper(gym.Env):
             norm_action[3] = 0.0
 
         return norm_action
+
+
+class SelfPlayDodgeWrapper(gym.Env):
+    def __init__(self, base_env_fn, args):
+        super().__init__()
+        self.env = base_env_fn()
+
+        # 参数
+        self.history_len = args.history_len
+        self.raw_obs_dim = args.raw_obs_dim
+        self.action_dim = args.action_dim  # 单边动作维度
+
+        self.fly_act_dim = args.fly_act_dim
+        self.fire_act_dim = args.fire_act_dim
+
+        # 组合后的 observation 空间，仍为“单个智能体”的输入
+        obs_act_dim = self.raw_obs_dim + self.action_dim
+        self.observation_space = spaces.Box(
+            low=-np.inf, high=np.inf, shape=(self.history_len * obs_act_dim,), dtype=np.float32
+        )
+        self.action_space = self.env.action_space  # 假设为单边动作空间
+
+        # 历史状态动作缓存（每方一个）
+        self.obs_history = [deque(maxlen=self.history_len), deque(maxlen=self.history_len)]
+        self.act_history = [deque(maxlen=self.history_len), deque(maxlen=self.history_len)]
+
+        self.warmup_action = np.array(args.warmup_action, dtype=np.int32)
+
+        # 累计奖励
+        self.total_rewards = [0.0, 0.0]
+
+    def reset(self, **kwargs):
+        obs_pair = self.env.reset()  # obs_pair: (2, obs_dim)
+        for i in [0, 1]:
+            self.obs_history[i].clear()
+            self.act_history[i].clear()
+            self.total_rewards[i] = 0.0
+
+        # warmup 执行
+        for _ in range(self.history_len):
+            norm_action = self.normalize_action(self.warmup_action)
+            obs_pair, reward_pair, done, info = self.env.step([norm_action, norm_action])
+            for i in [0, 1]:
+                self.obs_history[i].append(obs_pair[i])
+                self.act_history[i].append(self.warmup_action)
+
+        return self._get_observations(), {}
+
+    def step(self, action_pair):
+        """
+        :param action_pair: list or tuple of two actions [action0, action1]
+        动作是发射的概率，2位
+        """
+        full_actions = []
+        for i in range(len(action_pair)):
+            norm_action = self.normalize_action(action_pair[i])
+            full_actions.append(norm_action)
+        full_actions = np.array(full_actions)
+
+        obs_pair, reward_pair, done, info = self.env.step(full_actions)
+
+        # 判断是否 timeout
+        truncated = info.get("timeout", False)
+
+        # 保存数据
+        for i in [0, 1]:
+            self.obs_history[i].append(obs_pair[i])
+            self.act_history[i].append(action_pair[i])
+            self.total_rewards[i] += reward_pair[i]
+
+        return self._get_observations(), reward_pair, done, truncated, info
+
+    def _get_observations(self):
+        """
+        返回双方的 observation 序列
+        """
+        obs_seq = []
+        for i in [0, 1]:
+            seq = [np.concatenate([o, a], axis=0) for o, a in zip(self.obs_history[i], self.act_history[i])]
+            obs_seq.append(np.concatenate(seq, axis=0))
+        return obs_seq  # [obs0_seq, obs1_seq]
+
+    def get_total_rewards(self):
+        return self.total_rewards
+
+    def render(self, *args, **kwargs):
+        return self.env.render(*args, **kwargs)
+
+    def close(self):
+        self.env.close()
+
+    def normalize_action(self, action, temperature=0.5, threshold=0.3, mode='train'):
+        norm_action = np.zeros(4)
+        norm_action[:3] = action[:3]
+
+        logits = torch.tensor([action[3], action[4]])
+        probs = F.softmax(logits / temperature, dim=0)
+        act_prob = probs[0].item()
+        do_act = threshold < act_prob
+        norm_action[3] = 1.0 if do_act else 0.0
+
+        if action[3] == action[4] == 0:
+            norm_action[3] = 0.0
+
+        return norm_action.astype(np.int32)

@@ -156,7 +156,7 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
         init_enm_alt = self.np_random.uniform(14000., 30000.)
         init_enm_speed = self.np_random.uniform(400., 1000.)
         init_enm_heading = self.np_random.uniform(0., 360.)
-        init_enm_distance = self.np_random.uniform(2000., 20000.)
+        init_enm_distance = self.np_random.uniform(6000., 10000.)
         init_enm_angle = self.np_random.uniform(0., 360.)
 
         init_enm_lat, init_enm_lon = calculate_enemy_position(init_enm_distance, init_enm_angle)

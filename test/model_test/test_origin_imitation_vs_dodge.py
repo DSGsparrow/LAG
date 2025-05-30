@@ -263,8 +263,8 @@ if __name__ == "__main__":
     # 2, yaml: render path, baselines
     args3 = Namespace(
         config_name='1v1/DodgeMissile/HierarchyVsBaselineSelf',
-        model_path='./trained_model/dodge_missile/ppo_air_combat_dodge2.zip',
-        log_file='./test_result/log/test_dodge2_vs_shoot_imi.log',
+        model_path='./trained_model/dodge_missile/ppo_air_combat_dodge4.zip',
+        log_file='./test_result/log/test_dodge4_vs_shoot_imi.log',
         save_path='./test_result/expert_data',
         save_npz=True,
         num_envs=1,

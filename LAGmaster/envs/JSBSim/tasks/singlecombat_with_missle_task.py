@@ -384,7 +384,8 @@ class HierarchicalSingleCombatShootTask(HierarchicalSingleCombatTask, SingleComb
 
     def reset(self, env):
         self._inner_rnn_states = {agent_id: np.zeros((1, 1, 128)) for agent_id in env.agents.keys()}
-        self.baseline_agent.reset()
+        if self.use_baseline:
+            self.baseline_agent.reset()
         SingleCombatShootMissileTask.reset(self, env)
 
     def step(self, env):

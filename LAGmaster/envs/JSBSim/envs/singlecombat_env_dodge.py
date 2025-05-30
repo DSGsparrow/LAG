@@ -122,7 +122,7 @@ class SingleCombatEnvDodge(BaseEnv):
         self.success_queue = deque(maxlen=100)  # 最近100局命中情况
 
         # additional steps
-        self.add_step_len = getattr(self.config, 'add_step_len', 20)
+        self.add_step_len = getattr(self.config, 'add_step_len', 200)
         self.add_step = 0
 
     def load_task(self):

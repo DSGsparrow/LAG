@@ -2,7 +2,7 @@
 task: hierarchical_singlecombat_dodge_missile
 
 # file path
-render_path: "./test_result/render/dodge2_vs_shoot_imi"
+render_path: "./test_result/render/dodge4_vs_shoot_imi"
 enm_ver: "shoot_imi"
 
 # simulation config
