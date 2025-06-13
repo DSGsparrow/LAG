@@ -121,7 +121,7 @@ class ShootControlWrapper(gym.Env):
     def close(self):
         self.env.close()
 
-    def normalize_action(self, action, temperature=0.5, min_prob=0.01, mode='train'):
+    def normalize_action(self, action, temperature=0.5, min_prob=0.001, mode='train'):
         """
         将网络输出的 action[3] (wait score), action[4] (fire score) 合成最终是否打弹的 0/1 决策。
         前 3 维直接复制，第 4 维为伯努利采样决定是否发射。

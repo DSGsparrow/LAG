@@ -7,7 +7,7 @@ from .singlecombat_task import SingleCombatTask, HierarchicalSingleCombatTask
 from ..reward_functions import AltitudeReward, PostureReward, MissilePostureReward, EventDrivenReward, PostureShootReward
 from ..reward_functions import ShootPenaltyReward, ShootGapPenaltyReward, RelativeAltitudeReward, ShootEventDrivenReward
 from ..reward_functions import ShootEnemyPostureReward
-from ..termination_conditions import ExtremeState, LowAltitude, Overload, Timeout, DodgeMissileSafeReturn
+from ..termination_conditions import ExtremeState, LowAltitude, Overload, Timeout, DodgeMissileSafeReturn, ShootWrong
 from ..termination_conditions import SafeReturn, ShootSafeReturn
 from ..reward_functions import EndAltitudeReward, ShootWaitReward
 from ..core.simulatior import MissileSimulator
@@ -121,6 +121,7 @@ class HierarchicalSingleCombatShootMissileSoloTask(HierarchicalSingleCombatTask,
             Overload(self.config),
             ShootSafeReturn(self.config),
             Timeout(self.config),
+            ShootWrong(self.config)
         ]
 
     def load_observation_space(self):

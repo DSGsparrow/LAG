@@ -129,16 +129,17 @@ def setup_logging(env_id=0, log_file=None):
 
 
 def parse_args():
+    num = 5
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="1v1/ShootMissile/HierarchyVsBaselineShootSolo")
 
     # 基本路径
-    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_solo_new2.log")
+    parser.add_argument("--log_file", type=str, default=f"./train/result/train_shoot_solo_new{num}.log")
     parser.add_argument("--model_path", type=str, default="")
     parser.add_argument("--pretrained_pt_path", type=str, default="")
-    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_solo_new2/shoot_solo_checkpoints/")
+    parser.add_argument("--checkpoint_path", type=str, default=f"./trained_model/shoot_solo_new{num}/shoot_solo_checkpoints/")
     parser.add_argument("--tb_log", type=str, default="./ppo_air_combat_tb/")
-    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_solo_new2/ppo_air_combat")
+    parser.add_argument("--save_model_path", type=str, default=f"./trained_model/shoot_solo_new{num}/ppo_air_combat")
 
     # 模型路径
     parser.add_argument("--fly_model_path", type=str, default="trained_model/shoot_back/ppo_air_combat.zip")
