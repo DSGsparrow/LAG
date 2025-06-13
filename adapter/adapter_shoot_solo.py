@@ -121,11 +121,12 @@ class ShootControlWrapper(gym.Env):
     def close(self):
         self.env.close()
 
-    def normalize_action(self, action, temperature=0.5, threshold=0.5, mode='train'):
+    def normalize_action(self, action, temperature=0.5, min_prob=0.01, mode='train'):
         """
-        将网络输出的 action[3] (act score), action[4] (wait score) 合成最终是否打弹的 0/1 决策。
-        前 3 维直接复制，最后一维根据 softmax + 阈值判断是否打弹。
+        将网络输出的 action[3] (wait score), action[4] (fire score) 合成最终是否打弹的 0/1 决策。
+        前 3 维直接复制，第 4 维为伯努利采样决定是否发射。
         """
+
         norm_action = np.zeros(4)
         norm_action[0] = action[0]
         norm_action[1] = action[1]
@@ -133,18 +134,20 @@ class ShootControlWrapper(gym.Env):
 
         # softmax + 温度
         logits = torch.tensor([action[3], action[4]])
-        probs = F.softmax(logits / temperature, dim=0)
-        act_prob = probs[0].item()
+        probs = F.softmax(logits / temperature, dim=0).numpy()
 
-        if mode == 'train':
-            # do_act = np.random.rand() < act_prob  # 伯努利 随机
-            do_act = threshold < act_prob
-        else:
-            do_act = threshold < act_prob
+        # 概率下限截断，确保每个动作至少有 min_prob 的概率
+        probs = np.clip(probs, min_prob, 1.0)
+        probs /= probs.sum()  # 重新归一化，确保和为1
 
-        norm_action[3] = 1.0 if do_act else 0.0
+        # 伯努利采样，0代表等待，1代表发射
+        do_act = np.random.choice([0, 1], p=probs)
 
+        norm_action[3] = float(do_act)
+
+        # 如果两个 logit 都是 0，视为无动作
         if action[3] == action[4] == 0:
-            norm_action[3] = 0.
+            norm_action[3] = 0.0
 
         return norm_action
+

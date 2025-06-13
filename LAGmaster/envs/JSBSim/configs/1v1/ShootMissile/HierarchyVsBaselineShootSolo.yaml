@@ -2,7 +2,7 @@
 task: hierarchical_singlecombat_shoot_solo
 
 # file path
-render_path: "./render_train/shoot_solo5"
+render_path: "./render_train/shoot_solo_new2 "
 state_path: "./test_result/result/states_imi_dodge2.jsonl"
 
 # shoot area
@@ -72,5 +72,5 @@ ShootPenaltyReward_scale: 50
 
 ShootGapPenaltyReward_scale: 1
 
-ShootWaitReward_scale: 0.1
+ShootWaitReward_scale: 1
 
