@@ -52,6 +52,9 @@ class ShootWrong(BaseTerminationCondition):
             if any(obj):
                 self.log(f'{agent_id} Shoot Wrong! Total Steps={env.current_step}')
                 return True, False, info
+            else:
+                self.log(f'{agent_id} Shoot Right at least! Total Steps={env.current_step}')
+                return False, False, info
 
         else:
             return False, False, info

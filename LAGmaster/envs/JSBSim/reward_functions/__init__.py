@@ -14,3 +14,10 @@ from .guide.altitude_reward import AltitudeGuideReward
 from .guide.speed_reward import SpeedGuideReward
 from .shoot_wait_reward import ShootWaitReward
 from .shoot.shoot_enemy_posture_reward import ShootEnemyPostureReward
+from .selfplay.shoot_penalty_reward import SelfPlayShootPenaltyReward
+from .selfplay.shoot_posture_penalty import SelfPlayShootPosturePenalty
+from .selfplay.shoot_wait_reward import SelfPlayShootWaitReward
+from .selfplay.shoot_event_driven_reward import SelfPlayShootEventDrivenReward
+from .selfplay.shoot_gap_penalty import SelfPlayShootGapPenalty
+from .selfplay.posture_reward import SelfPlayPostureReward
+from .selfplay.enemy_posture_reward import SelfPlayEnemyPostureReward

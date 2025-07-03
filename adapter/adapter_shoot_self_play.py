@@ -8,6 +8,146 @@ from gymnasium import spaces
 import torch.nn.functional as F
 import torch
 import logging
+from agent.upper_agent import UpperAgent
+
+
+class SelfPlayUpperWrapper(gym.Env):
+    def __init__(self, base_env, target_state):
+        super().__init__()
+        self.env = base_env
+        self.observation_space = self.env.observation_space
+        self.action_space = self.env.action_space
+
+        self.num_agent = 2
+        self.upper_agent = [UpperAgent() for _ in range(self.num_agent)]
+        self.opponent_agent = None  # 先留空，后续用 set_opponent_agent 设置
+        self.target_state = target_state
+
+        self.guide_model = PPO.load("trained_model/guide/ppo_air_combat.zip")
+        self.dodge_model = PPO.load("trained_model/dodge_missile/ppo_air_combat_dodge4.zip")
+
+        self.agent_id = "A0100"
+        self.opponent_id = "B0100"
+        self.agent_ids = [self.agent_id, self.opponent_id]
+
+        self.acc_reward = 0
+        self.obs = None
+        self.info = {}
+
+    def set_opponent_agent(self, model_path):
+        self.opponent_agent = PPO.load(model_path)
+
+    def reset(self, **kwargs):
+        obs = self.env.reset()
+        self.obs = obs
+        # self.info = info
+        self.acc_reward = 0
+
+        for i in range(self.num_agent):
+            self.upper_agent[i].reset()
+
+        while not self._self_in_target_state():
+            action_dict = {
+                self.agent_id: self._select_fixed_model_action(),
+                self.opponent_id: self._select_opponent_action()
+            }
+            action_packed = self.env.pack(action_dict)
+            obs, reward, done, info = self.env.step(action_packed)
+            self.acc_reward += reward[0]
+            if done:
+                # break
+                obs = self.env.reset()
+                info = {}
+            self.obs = obs
+            self.info = info
+
+        ego_obs = self.obs[0]
+        # 环境返回了双方的状态
+
+        return ego_obs, self.info
+
+    def step(self, action):
+        if not self._self_in_target_state():
+            self.acc_reward = 0
+            terminated = False
+            truncated = False
+
+            while not self._self_in_target_state():
+                action_dict = {
+                    self.agent_id: self._select_fixed_model_action(),
+                    self.opponent_id: self._select_opponent_action()
+                }
+                action_packed = self.env._pack(action_dict)
+                obs, reward, done, info = self.env.step(action_packed)
+
+                self.acc_reward += reward[0]
+                self.obs = obs
+                self.info = info
+
+                if done:
+                    # ✅ 根据 info 推断 terminated / truncated
+                    terminated = done
+                    truncated = info.get("timeout", False)
+                    break
+
+            ego_obs = self.obs[0]
+            return ego_obs, self.acc_reward, terminated, truncated, self.info
+
+        # === 正常训练阶段 ===
+        oppo_action = self._select_opponent_action()
+        action_dict = {
+            self.agent_id: action,
+            self.opponent_id: oppo_action
+        }
+        action_packed = self.env._pack(action_dict)
+        obs, reward, done, info = self.env.step(action_packed)
+        self.obs = obs
+        self.info = info
+        ego_obs = self.obs[0]
+
+        # ✅ 判断 terminated 和 truncated
+        terminated = done
+        truncated = info.get("timeout", False)
+
+        return ego_obs, reward[0], terminated, truncated, info
+
+    def _self_in_target_state(self):
+        missile_launching = self.env.agents[self.agent_id].check_missile_launching() is not None
+        missile_warning = self.env.agents[self.agent_id].check_missile_warning() is not None
+        state = self.upper_agent[0].select_maneuver_model(missile_launching, missile_warning)
+        return state == self.target_state
+
+    def _select_fixed_model_action(self):
+        # 这个函数就是给我方的
+        obs = self.obs[0]
+        state = self.upper_agent[0].current_state
+
+        with torch.no_grad():
+            if state == 1:
+                action = np.concatenate([self.guide_model.predict(obs, deterministic=True)[0], [0]])
+            elif state == 2:
+                action = np.concatenate([self.dodge_model.predict(obs, deterministic=True)[0], [0]])
+            else:
+                raise ValueError("Invalid fixed model state for self agent")
+        return action
+
+    def _select_opponent_action(self):
+        # 这个函数就是给敌方的
+        obs = self.obs[1]
+        missile_launching = self.env.agents[self.opponent_id].check_missile_launching() is not None
+        missile_warning = self.env.agents[self.opponent_id].check_missile_warning() is not None
+        state = self.upper_agent[1].select_maneuver_model(missile_launching, missile_warning)
+
+        with torch.no_grad():
+            if state == 0:
+                action = self.opponent_agent.predict(obs, deterministic=True)[0]
+            elif state == 1:
+                action = np.concatenate([self.guide_model.predict(obs, deterministic=True)[0], [0]])
+            elif state == 2:
+                action = np.concatenate([self.dodge_model.predict(obs, deterministic=True)[0], [0]])
+            else:
+                raise ValueError("Invalid fixed model state for opponent")
+        return action
 
 
 class ShootSelfPlayWrapper(gym.Env):

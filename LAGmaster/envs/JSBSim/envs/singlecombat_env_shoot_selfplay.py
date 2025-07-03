@@ -274,13 +274,13 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
         dones = self._pack(dones)
         rewards = self._pack(rewards)
 
-        ego_done = dones[0]
+        ego_done = dones[0] and dones[1]
         ego_reward = rewards[0]
 
         self.cumulative_reward += ego_reward.item()
 
         if ego_done:
-            shoot_success = info.get("shoot success", False)
+            shoot_success = info.get("A0100 shoot success", False)
             if not shoot_success:
                 render_states = self._pack(self.get_states()).reshape(-1, )
                 state = {

@@ -2,7 +2,7 @@
 task: hierarchical_singlecombat_shoot_back
 
 # file path
-render_path: "./render_train/shoot_selfplay"
+render_path: "./render_train/shoot_selfplay_new"
 state_path: "./test_result/result/states_imi_dodge2.jsonl"
 
 # shoot area
@@ -11,12 +11,15 @@ shoot_distance_sigma: 1000
 shoot_angle_center: 0
 shoot_angle_sigma: 10
 
+# shoot decide method
+shoot_decide_method: "bool"
+
 # simulation config
 sim_freq: 60
 agent_interaction_steps: 12 # step 0.2s
 
 # termination config
-max_steps: 1000             # episode length: 200s
+max_steps: 300             # episode length: 200s
 altitude_limit: 2500
 acceleration_limit_x: 10.0
 acceleration_limit_y: 10.0
@@ -36,7 +39,7 @@ aircraft_configs: {
       ic_psi_true_deg: 0,
       ic_u_fps: 800.0,
     },
-    missile: 1
+    missile: 2
   },
   B0100: {
     color: Blue,
@@ -48,7 +51,7 @@ aircraft_configs: {
       ic_psi_true_deg: 180.0,
       ic_u_fps: 800.0,
     },
-    missile: 1,
+    missile: 2,
   }
 }
 
@@ -60,17 +63,21 @@ min_attack_interval: 125     # unit: step
 battle_field_center: [120.0, 60.0, 0.0]
 
 # reward config
-#MissilePostureReward_scale: 30
+SelfPlayShootPenaltyReward_scale: 20
 
-ShootEventDrivenReward_scale: 300
-#EventDrivenReward_potential: true
+SelfPlayPostureReward_scale: 10
+SelfPlayPostureReward_potential: true
 
-ShootEnemyPostureReward_scale: 30
-ShootEnemyPostureReward_potential: true
+SelfPlayShootEventDrivenReward_scale: 300
+SelfPlayShootEventDrivenReward_potential: true
 
-ShootPenaltyReward_scale: 50
+SelfPlayShootGapPenalty_scale: 20
 
-ShootGapPenaltyReward_scale: 1
+SelfPlayShootPosturePenalty_scale: 10
 
-ShootWaitReward_scale: 0.1
+SelfPlayShootWaitReward_scale: 0.02
+
+SelfPlayEnemyPostureReward_scale: 0.1
+
+AltitudeReward_scale: 10
 

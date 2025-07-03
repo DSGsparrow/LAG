@@ -63,3 +63,346 @@
 2025-04-29 10:53:06,965 - INFO [ENV 0] - render_result: {'enm_distance': 11424.095673467602, 'enm_alt': 25408.46105866276, 'enm_lat': 60.098601162941634, 'enm_lon': 120.05627039517418, 'enm_speed': 726.7920655215007, 'enm_heading': 118.11129914496351, 'ego_alt': 22759.70882458281, 'ego_lat': 60, 'ego_lon': 120, 'ego_speed': 545.7335408916994, 'ego_heading': 0, 'enm_angle': 15.904197543495155, 'success': False, 'reward': 747.4568981707372, 'total_steps': 517, 'state': {'my_lat': 120.10317252848097, 'my_lon': 60.102423815435394, 'my_alt': 8715.952311568415, 'my_x': 11431.416609545591, 'my_y': 5747.04259894904, 'my_z': 8703.151523845447, 'my_vx': 74.49887180195324, 'my_vy': -195.48224843173634, 'my_vz': -26.669726812898276, 'enemy_lat': 120.00443420689024, 'enemy_lon': 60.12169528405065, 'enemy_alt': 7890.575148703266, 'enemy_x': 13575.233230041158, 'enemy_y': 246.82367260697447, 'enemy_z': 7876.1535471040515, 'enemy_vx': 42.16174167289981, 'enemy_vy': 220.70699493027112, 'enemy_vz': 40.57594764121238}}
 2025-04-29 10:53:06,966 - INFO [ENV 0] - cumulative_reward_self: 152.86625395937605
 2025-04-29 10:53:06,966 - INFO [ENV 0] - cumulative_reward_enemy: 0
+2025-07-03 20:29:33,616 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_selfplay.log
+2025-07-03 20:32:16,583 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_selfplay.log
+2025-07-03 20:33:28,882 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_selfplay.log
+2025-07-03 20:33:30,547 - INFO [ENV 0] - A0100 launch mission! Total Steps=1, obs=[ 1.26199544 -0.05472329  0.99850156  0.01523959  0.99988387  0.7461803
+  0.0032205   0.00875107  0.56080572 -0.10640996  0.28409059  2.54688144
+  1.50598354  0.93957462  1.          0.          0.          0.
+  0.          0.          0.        ], state=[ 1.20000000e+02  6.00004562e+01  6.30997719e+03  5.08716565e+01
+  5.67716146e-04  6.30997699e+03  2.53719301e+02 -7.93988623e-02
+ -9.55655057e-01  1.20093985e+02  5.99306640e+01  6.59406778e+03
+ -7.72908697e+03  5.26074384e+03  6.58723152e+03  1.09904087e+02
+  1.87723610e+02 -5.09015560e-01], current_reward=0
+2025-07-03 20:33:30,548 - INFO [ENV 0] - B0100 launch mission! Total Steps=1, obs=[ 1.31881356 -0.05907143  0.99825376  0.00962452  0.99995368  0.63977034
+  0.00269905  0.00482847  0.46908468  0.10640996 -0.28409059  1.63560911
+  0.59471121  0.93957462 -1.          0.10646823 -0.28409079  1.63560911
+  0.59510785  0.93957462 -1.        ], state=[ 1.20093985e+02  5.99306640e+01  6.59406778e+03 -7.72908697e+03
+  5.26074384e+03  6.58723152e+03  1.09904087e+02  1.87723610e+02
+ -5.09015560e-01  1.20000000e+02  6.00004562e+01  6.30997719e+03
+  5.08716565e+01  5.67716146e-04  6.30997699e+03  2.53719301e+02
+ -7.93988623e-02 -9.55655057e-01], current_reward=0
+2025-07-03 20:34:12,563 - INFO [ENV 0] - A0100 launch mission! Total Steps=28, obs=[ 1.2425728   0.67652302  0.73642148 -0.01445957  0.99989545  0.77419113
+  0.03221726  0.00408816  0.58679864 -0.13419664  0.26923512  2.08383174
+  0.77792124  1.0742155   1.          0.          0.          0.
+  0.          0.          0.        ], state=[  120.0036541     60.01262041  6212.86399489  1407.44422659
+   204.01940748  6212.70573531   237.61441085   113.13222339
+    12.23939142   120.11377258    59.93371826  6482.09911038
+ -7386.58432388  6367.64933105  6474.66235128   -42.02195236
+   214.49498242    41.48981278], current_reward=-10.240000000000002
+2025-07-03 20:34:12,564 - INFO [ENV 0] - B0100 launch mission! Total Steps=28, obs=[ 1.29641982  0.93897989  0.34397203 -0.1348669   0.99086372  0.63999449
+ -0.01135633  0.13578853  0.48318768  0.13419664 -0.26923512  2.36367142
+  1.05776092  1.0742155  -1.          0.13487748 -0.26939338  2.36367142
+  1.05515842  1.0742155  -1.        ], state=[  120.11377258    59.93371826  6482.09911038 -7386.58432388
+  6367.64933105  6474.66235128   -42.02195236   214.49498242
+    41.48981278   120.0036541     60.01262041  6212.86399489
+  1407.44422659   204.01940748  6212.70573531   237.61441085
+   113.13222339    12.23939142], current_reward=-10.240000000000002
+2025-07-03 20:34:28,226 - CRITICAL [ENV 0] - A0100 mission failed! Did not hit enemy! Total Steps=54
+2025-07-03 20:34:28,226 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=54
+2025-07-03 20:34:28,230 - INFO [ENV 0] - render_result: {'enm_distance': 9337.120650216586, 'enm_alt': 21634.105713474175, 'enm_lat': 59.93046711379261, 'enm_lon': 120.09331462912218, 'enm_speed': 712.202451780925, 'enm_heading': 59.659882906136076, 'ego_alt': 20701.89218888243, 'ego_lat': 60, 'ego_lon': 120, 'ego_speed': 836.1930868164006, 'ego_heading': 0, 'enm_angle': 146.02496244442756, 'success': False, 'reward': -40.24, 'total_steps': 54, 'state': {'my_lat': 120.00585510793316, 'my_lon': 60.02420505357024, 'my_alt': 6092.530401930732, 'my_x': 2699.333581659928, 'my_y': 326.7874132516182, 'my_z': 6091.951878578828, 'my_vx': 244.865917835816, 'my_vy': -85.7132733356077, 'my_vz': 33.01327966027743, 'enemy_lat': 120.12944167067953, 'enemy_lon': 59.927965653647554, 'enemy_alt': 6366.01553157624, 'enemy_x': -8026.3804715545775, 'enemy_y': 7245.742120667357, 'enemy_z': 6356.873188356795, 'enemy_vx': -184.03349185786797, 'enemy_vy': 97.59328976937115, 'enemy_vz': 26.46556487165695}}
+2025-07-03 20:34:28,270 - INFO [ENV 0] - A0100 launch mission! Total Steps=1, obs=[ 1.66637693e+00 -2.15646983e-02  9.99767455e-01  3.86608415e-03
+  9.99992527e-01  4.26506349e-01  7.15161820e-04  4.15934752e-03
+  2.79050343e-01  3.98394269e-01 -9.61468290e-01  1.40328695e+00
+  2.35662031e-01  7.29446754e-01 -1.00000000e+00  0.00000000e+00
+  0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00
+  0.00000000e+00], state=[ 1.20000000e+02  6.00002603e+01  8.33188465e+03  2.90370388e+01
+  3.59229025e-03  8.33188459e+03  1.45016776e+02  2.63893509e-02
+  8.47965998e-01  1.19872397e+02  6.00111646e+01  7.37041636e+03
+  1.25218604e+03 -7.12606563e+03  7.36632742e+03 -6.70813323e+00
+ -2.80432227e+02  5.57452100e-01], current_reward=0
+2025-07-03 20:34:28,271 - INFO [ENV 0] - B0100 launch mission! Total Steps=1, obs=[ 1.47408327e+00  4.25295696e-02  9.99095209e-01  1.59341812e-02
+  9.99873043e-01  8.24900618e-01 -2.27570654e-03  1.48958205e-02
+  5.92997625e-01 -3.98394269e-01  9.61468290e-01  2.90593062e+00
+  1.73830570e+00  7.29446754e-01 -1.00000000e+00 -3.98373389e-01
+  9.61468224e-01  2.90593062e+00  1.73987587e+00  7.29446754e-01
+ -1.00000000e+00], state=[ 1.19872397e+02  6.00111646e+01  7.37041636e+03  1.25218604e+03
+ -7.12606563e+03  7.36632742e+03 -6.70813323e+00 -2.80432227e+02
+  5.57452100e-01  1.20000000e+02  6.00002603e+01  8.33188465e+03
+  2.90370388e+01  3.59229025e-03  8.33188459e+03  1.45016776e+02
+  2.63893509e-02  8.47965998e-01], current_reward=0
+2025-07-03 20:34:38,790 - INFO [ENV 0] - A0100 launch mission! Total Steps=28, obs=[ 1.65697182 -0.98887034  0.14877986 -0.11236829  0.99366663  0.38827892
+ -0.02446305  0.10480736  0.26381323  0.42006933 -1.0121357   0.92874746
+  0.63660128  0.84855522 -1.          0.          0.          0.
+  0.          0.          0.        ], state=[  119.99692625    60.00665312  8284.85908153   742.20601497
+  -171.70281175  8284.81368685   111.04084417   -75.08234768
+    28.2751758    119.84685059    60.0142933   7272.72337768
+  1604.16375233 -8551.75611199  7266.80988876   176.35329912
+  -211.95826022    32.88737141], current_reward=-10.0
+2025-07-03 20:34:38,791 - INFO [ENV 0] - B0100 launch mission! Total Steps=28, obs=[ 1.45454468  0.90722019  0.42065607 -0.07573478  0.997128    0.80834825
+ -0.01440866  0.11572776  0.5893267  -0.42006933  1.0121357   2.50499137
+  2.2128452   0.84855522  1.         -0.40542947  1.01209031  2.50499137
+  2.27622561  0.84855522  1.        ], state=[  119.84685059    60.0142933   7272.72337768  1604.16375233
+ -8551.75611199  7266.80988876   176.35329912  -211.95826022
+    32.88737141   119.99692625    60.00665312  8284.85908153
+   742.20601497  -171.70281175  8284.81368685   111.04084417
+   -75.08234768    28.2751758 ], current_reward=-10.0
+2025-07-03 20:34:41,215 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=54
+2025-07-03 20:34:41,239 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=55
+2025-07-03 20:34:41,264 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=56
+2025-07-03 20:34:41,288 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=57
+2025-07-03 20:34:41,315 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=58
+2025-07-03 20:34:41,346 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=59
+2025-07-03 20:34:41,371 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=60
+2025-07-03 20:34:41,395 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=61
+2025-07-03 20:34:41,422 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=62
+2025-07-03 20:34:41,448 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=63
+2025-07-03 20:34:41,473 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=64
+2025-07-03 20:34:41,499 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=65
+2025-07-03 20:34:41,526 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=66
+2025-07-03 20:34:41,551 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=67
+2025-07-03 20:34:41,578 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=68
+2025-07-03 20:34:41,602 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=69
+2025-07-03 20:34:41,628 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=70
+2025-07-03 20:34:41,652 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=71
+2025-07-03 20:34:41,679 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=72
+2025-07-03 20:34:41,701 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=73
+2025-07-03 20:34:41,725 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=74
+2025-07-03 20:34:41,749 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=75
+2025-07-03 20:34:41,773 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=76
+2025-07-03 20:34:41,798 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=77
+2025-07-03 20:34:41,822 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=78
+2025-07-03 20:34:41,847 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=79
+2025-07-03 20:34:41,873 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=80
+2025-07-03 20:34:41,897 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=81
+2025-07-03 20:34:41,923 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=82
+2025-07-03 20:34:41,950 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=83
+2025-07-03 20:34:41,973 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=84
+2025-07-03 20:34:42,000 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=85
+2025-07-03 20:34:42,026 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=86
+2025-07-03 20:34:42,052 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=87
+2025-07-03 20:34:42,077 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=88
+2025-07-03 20:34:42,101 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=89
+2025-07-03 20:34:42,127 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=90
+2025-07-03 20:34:42,150 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=91
+2025-07-03 20:34:42,175 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=92
+2025-07-03 20:34:42,199 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=93
+2025-07-03 20:34:42,223 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=94
+2025-07-03 20:34:42,247 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=95
+2025-07-03 20:34:42,271 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=96
+2025-07-03 20:34:42,297 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=97
+2025-07-03 20:34:42,321 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=98
+2025-07-03 20:34:42,345 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=99
+2025-07-03 20:34:42,371 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=100
+2025-07-03 20:34:42,397 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=101
+2025-07-03 20:34:42,423 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=102
+2025-07-03 20:34:42,447 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=103
+2025-07-03 20:34:42,473 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=104
+2025-07-03 20:34:42,497 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=105
+2025-07-03 20:34:42,522 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=106
+2025-07-03 20:34:42,546 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=107
+2025-07-03 20:34:42,570 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=108
+2025-07-03 20:34:42,599 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=109
+2025-07-03 20:34:42,624 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=110
+2025-07-03 20:34:42,652 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=111
+2025-07-03 20:34:42,679 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=112
+2025-07-03 20:34:42,706 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=113
+2025-07-03 20:34:42,731 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=114
+2025-07-03 20:34:42,760 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=115
+2025-07-03 20:34:42,785 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=116
+2025-07-03 20:34:42,812 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=117
+2025-07-03 20:34:42,836 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=118
+2025-07-03 20:34:42,863 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=119
+2025-07-03 20:34:42,887 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=120
+2025-07-03 20:34:42,915 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=121
+2025-07-03 20:34:42,940 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=122
+2025-07-03 20:34:42,967 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=123
+2025-07-03 20:34:42,995 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=124
+2025-07-03 20:34:43,021 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=125
+2025-07-03 20:34:43,046 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=126
+2025-07-03 20:34:43,071 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=127
+2025-07-03 20:34:43,096 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=128
+2025-07-03 20:34:43,121 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=129
+2025-07-03 20:34:43,147 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=130
+2025-07-03 20:34:43,171 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=131
+2025-07-03 20:34:43,195 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=132
+2025-07-03 20:34:43,220 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=133
+2025-07-03 20:34:43,246 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=134
+2025-07-03 20:34:43,272 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=135
+2025-07-03 20:34:43,296 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=136
+2025-07-03 20:34:43,321 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=137
+2025-07-03 20:34:43,345 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=138
+2025-07-03 20:34:43,373 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=139
+2025-07-03 20:34:43,397 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=140
+2025-07-03 20:34:43,421 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=141
+2025-07-03 20:34:43,446 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=142
+2025-07-03 20:34:43,470 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=143
+2025-07-03 20:34:43,498 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=144
+2025-07-03 20:34:43,524 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=145
+2025-07-03 20:34:43,549 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=146
+2025-07-03 20:34:43,574 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=147
+2025-07-03 20:34:43,598 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=148
+2025-07-03 20:34:43,623 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=149
+2025-07-03 20:34:43,651 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=150
+2025-07-03 20:34:43,676 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=151
+2025-07-03 20:34:43,699 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=152
+2025-07-03 20:34:43,725 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=153
+2025-07-03 20:34:43,750 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=154
+2025-07-03 20:34:43,774 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=155
+2025-07-03 20:34:43,796 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=156
+2025-07-03 20:34:43,819 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=157
+2025-07-03 20:34:43,841 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=158
+2025-07-03 20:34:43,864 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=159
+2025-07-03 20:34:43,890 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=160
+2025-07-03 20:34:43,913 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=161
+2025-07-03 20:34:43,940 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=162
+2025-07-03 20:34:43,965 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=163
+2025-07-03 20:34:43,989 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=164
+2025-07-03 20:34:44,012 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=165
+2025-07-03 20:34:44,036 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=166
+2025-07-03 20:34:44,058 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=167
+2025-07-03 20:34:44,081 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=168
+2025-07-03 20:34:44,107 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=169
+2025-07-03 20:34:44,134 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=170
+2025-07-03 20:34:44,162 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=171
+2025-07-03 20:34:44,186 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=172
+2025-07-03 20:34:44,214 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=173
+2025-07-03 20:34:44,238 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=174
+2025-07-03 20:34:44,264 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=175
+2025-07-03 20:34:44,287 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=176
+2025-07-03 20:34:44,311 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=177
+2025-07-03 20:34:44,333 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=178
+2025-07-03 20:34:44,356 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=179
+2025-07-03 20:34:44,378 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=180
+2025-07-03 20:34:44,400 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=181
+2025-07-03 20:34:44,421 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=182
+2025-07-03 20:34:44,443 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=183
+2025-07-03 20:34:44,465 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=184
+2025-07-03 20:34:44,487 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=185
+2025-07-03 20:34:44,511 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=186
+2025-07-03 20:34:44,535 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=187
+2025-07-03 20:34:44,559 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=188
+2025-07-03 20:34:44,583 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=189
+2025-07-03 20:34:44,605 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=190
+2025-07-03 20:34:44,629 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=191
+2025-07-03 20:34:44,653 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=192
+2025-07-03 20:34:44,678 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=193
+2025-07-03 20:34:44,700 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=194
+2025-07-03 20:34:44,721 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=195
+2025-07-03 20:34:44,743 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=196
+2025-07-03 20:34:44,765 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=197
+2025-07-03 20:34:44,788 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=198
+2025-07-03 20:34:44,811 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=199
+2025-07-03 20:34:44,834 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=200
+2025-07-03 20:34:44,858 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=201
+2025-07-03 20:34:44,882 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=202
+2025-07-03 20:34:44,903 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=203
+2025-07-03 20:34:44,928 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=204
+2025-07-03 20:34:44,953 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=205
+2025-07-03 20:34:44,975 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=206
+2025-07-03 20:34:45,003 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=207
+2025-07-03 20:34:45,030 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=208
+2025-07-03 20:34:45,053 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=209
+2025-07-03 20:34:45,081 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=210
+2025-07-03 20:34:45,107 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=211
+2025-07-03 20:34:45,133 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=212
+2025-07-03 20:34:45,159 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=213
+2025-07-03 20:34:45,186 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=214
+2025-07-03 20:34:45,214 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=215
+2025-07-03 20:34:45,239 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=216
+2025-07-03 20:34:45,264 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=217
+2025-07-03 20:34:45,290 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=218
+2025-07-03 20:34:45,319 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=219
+2025-07-03 20:34:45,352 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=220
+2025-07-03 20:34:45,385 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=221
+2025-07-03 20:34:45,418 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=222
+2025-07-03 20:34:45,450 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=223
+2025-07-03 20:34:45,478 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=224
+2025-07-03 20:34:45,505 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=225
+2025-07-03 20:34:45,534 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=226
+2025-07-03 20:34:45,562 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=227
+2025-07-03 20:34:45,590 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=228
+2025-07-03 20:34:45,618 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=229
+2025-07-03 20:34:45,645 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=230
+2025-07-03 20:34:45,674 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=231
+2025-07-03 20:34:45,701 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=232
+2025-07-03 20:34:45,731 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=233
+2025-07-03 20:34:45,758 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=234
+2025-07-03 20:34:45,787 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=235
+2025-07-03 20:34:45,818 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=236
+2025-07-03 20:34:45,853 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=237
+2025-07-03 20:34:45,883 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=238
+2025-07-03 20:34:45,907 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=239
+2025-07-03 20:34:45,932 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=240
+2025-07-03 20:34:45,956 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=241
+2025-07-03 20:34:45,978 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=242
+2025-07-03 20:34:46,002 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=243
+2025-07-03 20:34:46,026 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=244
+2025-07-03 20:34:46,053 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=245
+2025-07-03 20:34:46,077 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=246
+2025-07-03 20:34:46,103 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=247
+2025-07-03 20:34:46,130 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=248
+2025-07-03 20:34:46,155 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=249
+2025-07-03 20:34:46,179 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=250
+2025-07-03 20:34:46,204 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=251
+2025-07-03 20:34:46,229 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=252
+2025-07-03 20:34:46,256 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=253
+2025-07-03 20:34:46,280 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=254
+2025-07-03 20:34:46,307 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=255
+2025-07-03 20:34:46,331 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=256
+2025-07-03 20:34:46,355 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=257
+2025-07-03 20:34:46,379 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=258
+2025-07-03 20:34:46,405 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=259
+2025-07-03 20:34:46,431 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=260
+2025-07-03 20:34:46,454 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=261
+2025-07-03 20:34:46,476 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=262
+2025-07-03 20:34:46,498 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=263
+2025-07-03 20:34:46,521 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=264
+2025-07-03 20:34:46,546 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=265
+2025-07-03 20:34:46,569 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=266
+2025-07-03 20:34:46,594 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=267
+2025-07-03 20:34:46,619 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=268
+2025-07-03 20:34:46,644 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=269
+2025-07-03 20:34:46,673 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=270
+2025-07-03 20:34:46,697 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=271
+2025-07-03 20:34:46,722 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=272
+2025-07-03 20:34:46,747 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=273
+2025-07-03 20:34:46,774 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=274
+2025-07-03 20:34:46,805 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=275
+2025-07-03 20:34:46,840 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=276
+2025-07-03 20:34:46,874 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=277
+2025-07-03 20:34:46,907 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=278
+2025-07-03 20:34:46,941 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=279
+2025-07-03 20:34:46,970 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=280
+2025-07-03 20:34:47,003 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=281
+2025-07-03 20:34:47,030 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=282
+2025-07-03 20:34:47,056 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=283
+2025-07-03 20:34:47,081 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=284
+2025-07-03 20:34:47,106 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=285
+2025-07-03 20:34:47,129 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=286
+2025-07-03 20:34:47,153 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=287
+2025-07-03 20:34:47,178 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=288
+2025-07-03 20:34:47,205 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=289
+2025-07-03 20:34:47,238 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=290
+2025-07-03 20:34:47,267 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=291
+2025-07-03 20:34:47,291 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=292
+2025-07-03 20:34:47,314 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=293
+2025-07-03 20:34:47,337 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=294
+2025-07-03 20:34:47,360 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=295
+2025-07-03 20:34:47,384 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=296
+2025-07-03 20:34:47,409 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=297
+2025-07-03 20:34:47,433 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=298
+2025-07-03 20:34:47,459 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=299
+2025-07-03 20:34:47,483 - CRITICAL [ENV 0] - A0100 step limits! Total Steps=300
+2025-07-03 20:34:47,483 - CRITICAL [ENV 0] - B0100 mission failed! Did not hit enemy! Total Steps=300
+2025-07-03 20:34:47,487 - INFO [ENV 0] - render_result: {'enm_distance': 7171.9498867346265, 'enm_alt': 24181.420299544316, 'enm_lat': 60.011176723389, 'enm_lon': 119.87340117636516, 'enm_speed': 920.6476356235429, 'enm_heading': 268.62504827725803, 'ego_alt': 27335.948182194777, 'ego_lat': 60, 'ego_lon': 120, 'ego_speed': 476.672060461187, 'ego_heading': 0, 'enm_angle': 280.0534320285104, 'success': False, 'reward': -31.35999999999997, 'total_steps': 300, 'state': {'my_lat': 119.83799525954849, 'my_lon': 60.02756394125033, 'my_alt': 9068.413497552341, 'my_x': 3086.4051588955754, 'my_y': -9045.14165158485, 'my_z': 9061.279929387729, 'my_vx': -73.19734669090631, 'my_vy': -213.8327491109711, 'my_vz': 1.6407633760144744, 'enemy_lat': 119.75166932418223, 'enemy_lon': 60.02659458859486, 'enemy_alt': 5290.7315154773805, 'enemy_x': 2991.432163112367, 'enemy_y': -13857.141962071024, 'enemy_z': 5275.028406522552, 'enemy_vx': 267.81295862584534, 'enemy_vy': 66.5770913719919, 'enemy_vz': 40.99300695107195}}
+2025-07-03 20:34:47,525 - INFO [ENV 0] - A0100 launch mission! Total Steps=1, obs=[ 1.76049005e+00 -5.33640471e-02  9.98575124e-01 -3.04704074e-03
+  9.99995358e-01  6.84781075e-01  3.42103914e-03 -1.03101392e-03
+  4.48426940e-01 -2.49960702e-01 -4.75286364e-01  2.85166717e+00
+  2.01174462e+00  9.37225042e-01  1.00000000e+00  0.00000000e+00
+  0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00
+  0.00000000e+00], state=[ 1.20000000e+02  6.00004169e+01  8.80245024e+03  4.65146899e+01
+  3.79541306e-03  8.80245007e+03  2.32828544e+02 -1.65240730e-02
+  2.97315076e-01  1.20047107e+02  5.99199088e+01  8.32716387e+03
+ -8.93379107e+03  2.63833505e+03  8.32037687e+03  2.28371501e+01
+ -1.46074431e+02  2.03606979e+00], current_reward=0
+2025-07-03 20:34:47,527 - INFO [ENV 0] - B0100 launch mission! Total Steps=1, obs=[ 1.66543277e+00  1.22404226e-02  9.99925083e-01  4.16332504e-03
+  9.99991333e-01  4.34820372e-01 -5.01770806e-04  7.80553336e-03
+  2.84796925e-01  2.49960702e-01  4.75286364e-01  1.12984803e+00
+  2.89925480e-01  9.37225042e-01  1.00000000e+00  2.49970024e-01
+  4.75286195e-01  1.12984803e+00  2.90384637e-01  9.37225042e-01
+  1.00000000e+00], state=[ 1.20047107e+02  5.99199088e+01  8.32716387e+03 -8.93379107e+03
+  2.63833505e+03  8.32037687e+03  2.28371501e+01 -1.46074431e+02
+  2.03606979e+00  1.20000000e+02  6.00004169e+01  8.80245024e+03
+  4.65146899e+01  3.79541306e-03  8.80245007e+03  2.32828544e+02
+ -1.65240730e-02  2.97315076e-01], current_reward=0

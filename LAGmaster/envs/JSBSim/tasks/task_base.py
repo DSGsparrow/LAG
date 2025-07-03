@@ -13,6 +13,8 @@ class BaseTask(ABC):
     """
     def __init__(self, config):
         self.config = config
+        self.shoot_decide_method = getattr(self.config, 'shoot_decide_method', "bool")
+
         self.reward_functions = []
         self.termination_conditions = []
         self.load_variables()

@@ -2,11 +2,15 @@ import numpy as np
 from gymnasium import spaces
 from collections import deque
 import logging
+from typing import List, Tuple
 
 from .singlecombat_task import SingleCombatTask, HierarchicalSingleCombatTask
 from ..reward_functions import AltitudeReward, PostureReward, MissilePostureReward, EventDrivenReward, PostureShootReward
 from ..reward_functions import ShootPenaltyReward, ShootGapPenaltyReward, RelativeAltitudeReward, ShootEventDrivenReward
 from ..reward_functions import AltitudeGuideReward, SpeedGuideReward
+from ..reward_functions import (SelfPlayShootPenaltyReward, SelfPlayPostureReward, SelfPlayShootEventDrivenReward,
+                                SelfPlayShootGapPenalty, SelfPlayShootPosturePenalty,
+                                SelfPlayShootWaitReward, SelfPlayEnemyPostureReward)
 from ..termination_conditions import ExtremeState, LowAltitude, Overload, Timeout, DodgeMissileSafeReturn
 from ..termination_conditions import SafeReturn, ShootSafeReturn
 from ..reward_functions import EndAltitudeReward
@@ -105,13 +109,14 @@ class HierarchicalSingleCombatShootMissileBackTask(HierarchicalSingleCombatTask,
         HierarchicalSingleCombatTask.__init__(self, config)
 
         self.reward_functions = [
-            PostureReward(self.config),
-            # AltitudeReward(self.config),
-            ShootEventDrivenReward(self.config),
-            ShootPenaltyReward(self.config),
-            ShootGapPenaltyReward(self.config),
-            AltitudeGuideReward(self.config),
-            SpeedGuideReward(self.config),
+            SelfPlayShootPenaltyReward(self.config),
+            SelfPlayPostureReward(self.config),
+            SelfPlayShootEventDrivenReward(self.config),
+            SelfPlayShootGapPenalty(self.config),
+            SelfPlayShootPosturePenalty(self.config),
+            SelfPlayShootWaitReward(self.config),
+            SelfPlayEnemyPostureReward(self.config),
+            AltitudeReward(self.config),
         ]
 
         self.termination_conditions = [
@@ -126,7 +131,10 @@ class HierarchicalSingleCombatShootMissileBackTask(HierarchicalSingleCombatTask,
         return SingleCombatDodgeMissileTask.load_observation_space(self)
 
     def load_action_space(self):
-        self.action_space = spaces.MultiDiscrete([3, 5, 3])
+        if self.shoot_decide_method == "bool":
+            self.action_space = spaces.MultiDiscrete([3, 5, 3, 2])
+        else:
+            self.action_space = spaces.MultiDiscrete([3, 5, 3, 2])  # not decided yet
 
         # return HierarchicalSingleCombatTask.load_action_space(self)
         return self.action_space
@@ -183,7 +191,38 @@ class HierarchicalSingleCombatShootMissileBackTask(HierarchicalSingleCombatTask,
         self._shoot_action = {agent_id: 0 for agent_id in env.agents.keys()}
         self._inner_rnn_states = {agent_id: np.zeros((1, 1, 128)) for agent_id in env.agents.keys()}
         self.launch = {agent_id: False for agent_id in env.agents.keys()}
+        self.cumulative_rewards = {agent_id: [0 for _ in range(len(self.reward_functions))] for agent_id in env.agents.keys()}
         return SingleCombatDodgeMissileTask.reset(self, env)
+
+    def get_reward(self, env, agent_id, info={}) -> Tuple[float, dict]:
+        """
+        Aggregate reward functions
+
+        Args:
+            env: environment instance
+            agent_id: current agent id
+            info: additional info
+
+        Returns:
+            (tuple):
+                reward(float): total reward of the current timestep
+                info(dict): additional info
+        """
+        total_reward = 0.0
+
+        # 确保初始化过（防止外部提前调用未初始化）
+        if not hasattr(self, 'cumulative_rewards'):
+            self.cumulative_rewards = {
+                aid: [0.0 for _ in range(len(self.reward_functions))]
+                for aid in env.agents.keys()
+            }
+
+        for i, reward_function in enumerate(self.reward_functions):
+            r = reward_function.get_reward(self, env, agent_id)
+            total_reward += r
+            self.cumulative_rewards[agent_id][i] += r
+
+        return total_reward, info
 
     def step(self, env):
         SingleCombatTask.step(self, env)

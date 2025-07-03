@@ -326,6 +326,12 @@ class AircraftSimulator(BaseSimulator):
                 return missile
         return None
 
+    def check_missile_launching(self):
+        for missile in self.launch_missiles:
+            if missile.is_alive:
+                return missile
+        return None
+
 
 class MissileSimulator(BaseSimulator):
 
