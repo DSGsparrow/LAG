@@ -80,13 +80,13 @@ class SelfPlayUpperWrapper(gym.Env):
                 action_packed = self.env._pack(action_dict)
                 obs, reward, done, info = self.env.step(action_packed)
 
-                self.acc_reward += reward[0]
+                self.acc_reward += reward[0].item()
                 self.obs = obs
                 self.info = info
 
                 if done:
                     # ✅ 根据 info 推断 terminated / truncated
-                    terminated = done
+                    terminated = done.item()
                     truncated = info.get("timeout", False)
                     break
 
@@ -106,10 +106,10 @@ class SelfPlayUpperWrapper(gym.Env):
         ego_obs = self.obs[0]
 
         # ✅ 判断 terminated 和 truncated
-        terminated = done
+        terminated = done.item()
         truncated = info.get("timeout", False)
 
-        return ego_obs, reward[0], terminated, truncated, info
+        return ego_obs, reward[0].item(), terminated, truncated, info
 
     def _self_in_target_state(self):
         missile_launching = self.env.agents[self.agent_id].check_missile_launching() is not None

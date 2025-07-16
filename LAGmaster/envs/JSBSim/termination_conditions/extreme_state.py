@@ -28,4 +28,6 @@ class ExtremeState(BaseTerminationCondition):
             env.agents[agent_id].crash()
             self.log(f'{agent_id} is on an extreme state! Total Steps={env.current_step}')
         success = False
+        info[f'{agent_id} success'] = False
+        info[f'{agent_id} extreme state'] = True
         return done, success, info

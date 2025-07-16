@@ -29,9 +29,9 @@ class SelfPlayShootEventDrivenReward(BaseRewardFunction):
         """
         reward = 0
         if env.agents[agent_id].is_shotdown:
-            reward -= 1
+            reward -= 1 * 0.9
         elif env.agents[agent_id].is_crash:
-            reward -= 1
+            reward -= 1 * 0.9
 
         if all([enemy.is_shotdown for enemy in env.agents[agent_id].enemies]):
             reward += 1

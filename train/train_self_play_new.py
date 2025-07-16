@@ -12,48 +12,7 @@ import argparse
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.callbacks import CheckpointCallback
 
-from adapter.adapter_shoot_self_play import SelfPlayUpperWrapper
-from LAGmaster.envs.JSBSim.envs.singlecombat_env_shoot_selfplay import SingleCombatEnvShootSelfPlay
-
-
-class EnvIDFilter(logging.Filter):
-    def __init__(self, env_id):
-        super().__init__()
-        self.env_id = env_id
-
-    def filter(self, record):
-        record.env_id = f"{self.env_id}"
-        return True
-
-
-def setup_logging(env_id=0, log_file=None):
-    """配置 logging，让日志既输出到终端，又写入文件，标明 ENV ID"""
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    logger.handlers.clear()
-
-    # 创建 Filter，用于注入 env_id
-    env_filter = EnvIDFilter(env_id)
-
-    # 日志格式带 env_id
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s [ENV %(env_id)s] - %(message)s")
-
-    # 终端 handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(formatter)
-    console_handler.addFilter(env_filter)
-
-    # 文件 handler
-    file_handler = logging.FileHandler(log_file, mode="a")
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(formatter)
-    file_handler.addFilter(env_filter)
-
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
-
-    logging.info(f"Logger for ENV {env_id} initialized, log path: {log_file}")
+from env_factory.env_factory_selfplay import make_env
 
 
 def parse_args():
@@ -62,13 +21,13 @@ def parse_args():
     parser.add_argument("--target_state", type=int, default=0)
 
     # 基本路径
-    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_selfplay.log")
-    parser.add_argument("--model_path", type=str, default="")
+    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_selfplay_new2.log")
+    parser.add_argument("--model_path", type=str, default="model_pool/shoot_selfplay_1/model_step_130000.zip")
     parser.add_argument("--pretrained_pt_path", type=str, default="")
     parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_selfplay/shoot_solo_checkpoints/")
-    parser.add_argument("--tb_log", type=str, default="./ppo_air_combat_tb/")
+    parser.add_argument("--tb_log", type=str, default="./ppo_air_combat_sp_tb/")
     parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_selfplay/ppo_air_combat")
-    parser.add_argument("--model_dir", type=str, default="./model_pool/shoot_selfplay_1")
+    parser.add_argument("--model_dir", type=str, default="./model_pool/shoot_selfplay_2")
 
     # 模型路径
     parser.add_argument("--fly_model_path", type=str, default="trained_model/shoot_back_t2/ppo_air_combat.zip")
@@ -84,12 +43,12 @@ def parse_args():
     parser.add_argument("--warmup_action", nargs='+', type=float, default=[1, 2, 1, 0.0, 0.0])
 
     # 多线程
-    parser.add_argument("--num_envs", type=int, default=1)
+    parser.add_argument("--num_envs", type=int, default=16)
 
     # 训练参数
-    parser.add_argument("--total_timesteps", type=int, default=5_000_000)
+    parser.add_argument("--total_timesteps", type=int, default=5_000_00)
     parser.add_argument("--save_freq", type=int, default=4_000)
-    parser.add_argument("--save_interval", type=int, default=10_000)
+    parser.add_argument("--save_interval", type=int, default=2500)
     parser.add_argument("--learning_rate", type=float, default=3e-4)
     parser.add_argument("--n_steps", type=int, default=2048)
     parser.add_argument("--batch_size", type=int, default=64)
@@ -106,13 +65,6 @@ def parse_args():
     parser.add_argument("--dropout", type=float, default=0.1)
 
     return parser.parse_args()
-
-
-def make_env(env_id, args):
-    setup_logging(env_id, args.log_file)
-    env_origin = SingleCombatEnvShootSelfPlay(config_name=args.config, env_id=env_id)
-    env = SelfPlayUpperWrapper(env_origin, target_state=args.target_state)
-    return env
 
 
 def main():
@@ -180,12 +132,14 @@ def main():
         model_path = os.path.join(args.model_dir, f"model_step_{step + save_interval}.zip")
         ego_agent.save(model_path)
         saved_models.append(model_path)
+        logging.critical(f"[INFO] Saved ego model to {model_path}")
         print(f"[INFO] Saved ego model to {model_path}")
 
         # === 自博弈更新：从已有模型中随机选择一个作为对手 ===
         opponent_path = random.choice(saved_models)
         # opponent_agent = PPO.load(opponent_path)
         env.env_method("set_opponent_agent", opponent_path)
+        logging.critical(f"[INFO] Loaded opponent model from {opponent_path}")
         print(f"[INFO] Loaded opponent model from {opponent_path}")
 
 

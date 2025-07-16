@@ -43,12 +43,12 @@ class SelfPlayShootPosturePenalty(BaseRewardFunction):
             # 只要出现严重偏离就严重惩罚
             obj = [0, 0, 0, 0]
             obj[0] = ego_AO > 50
-            obj[1] = distance > 10000
+            obj[1] = distance > 11000
             obj[2] = relative_height < -0.5
             obj[3] = ego_v < 0.7 * 340
 
             if any(obj):
-                reward = -1
+                reward = np.sum(np.array(obj)) / 4
 
         # self.pre_remaining_missiles[agent_id] = task.remaining_missiles[agent_id]
         return self._process(reward, agent_id)

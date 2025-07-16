@@ -156,7 +156,7 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
         init_enm_alt = self.np_random.uniform(14000., 30000.)
         init_enm_speed = self.np_random.uniform(400., 1000.)
         init_enm_heading = self.np_random.uniform(0., 360.)
-        init_enm_distance = self.np_random.uniform(6000., 10000.)
+        init_enm_distance = self.np_random.uniform(9000., 15000.)
         init_enm_angle = self.np_random.uniform(0., 360.)
 
         init_enm_lat, init_enm_lon = calculate_enemy_position(init_enm_distance, init_enm_angle)
@@ -281,18 +281,18 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
 
         if ego_done:
             shoot_success = info.get("A0100 shoot success", False)
-            if not shoot_success:
-                render_states = self._pack(self.get_states()).reshape(-1, )
-                state = {
-                    "my_lat": render_states[0], "my_lon": render_states[1], "my_alt": render_states[2],
-                    "my_x": render_states[3], "my_y": render_states[4], "my_z": render_states[5],
-                    "my_vx": render_states[6], "my_vy": render_states[7], "my_vz": render_states[8],
-                    "enemy_lat": render_states[9], "enemy_lon": render_states[10], "enemy_alt": render_states[11],
-                    "enemy_x": render_states[12], "enemy_y": render_states[13], "enemy_z": render_states[14],
-                    "enemy_vx": render_states[15], "enemy_vy": render_states[16], "enemy_vz": render_states[17],
-                }
-            else:
-                state = None
+            # if not shoot_success:
+            #     render_states = self._pack(self.get_states()).reshape(-1, )
+            #     state = {
+            #         "my_lat": render_states[0], "my_lon": render_states[1], "my_alt": render_states[2],
+            #         "my_x": render_states[3], "my_y": render_states[4], "my_z": render_states[5],
+            #         "my_vx": render_states[6], "my_vy": render_states[7], "my_vz": render_states[8],
+            #         "enemy_lat": render_states[9], "enemy_lon": render_states[10], "enemy_alt": render_states[11],
+            #         "enemy_x": render_states[12], "enemy_y": render_states[13], "enemy_z": render_states[14],
+            #         "enemy_vx": render_states[15], "enemy_vy": render_states[16], "enemy_vz": render_states[17],
+            #     }
+            # else:
+            #     state = None
 
             total_steps = self.current_step
             result = {"enm_distance": self.current_enemy["enm_distance"],
@@ -311,23 +311,61 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
                       "success": shoot_success,
                       "reward": self.cumulative_reward,
                       "total_steps": total_steps,  # 新增 Total Steps 记录
-                      "state": state,
+                      # "state": state,
                       }
 
             # logger = logging.getLogger()  # 继承主 logger
             logging.info("render_result: " + str(result))
 
-            self.tb_writer.add_scalar("success", float(shoot_success), self.tb_step)
+            self.tb_writer.add_scalar("shoot success", float(shoot_success), self.tb_step)
             self.tb_writer.add_scalar("episode_reward", self.cumulative_reward, self.tb_step)
 
             self.success_queue.append(int(shoot_success))
             win_rate = sum(self.success_queue) / len(self.success_queue)
             self.tb_writer.add_scalar("win_rate", win_rate, self.tb_step)
 
+            self.log_episode_result_to_tensorboard(info)
+
         self.tb_step += 1
 
         # obs：两个  reward：两个  ego_done:一个  info：一个
         return self._pack(obs), rewards, ego_done, info
+
+    def log_episode_result_to_tensorboard(self, info: dict):
+        """
+        记录完整的 episode 结果向量，每一类都记录 0 或 1，确保 tensorboard 可用于滑动平均等计算
+        """
+        a0100_success = info.get("A0100 success", None)
+        b0100_success = info.get("B0100 success", None)
+        draw_both_live = info.get("draw and both live", False)
+
+        both_dead = (
+                not draw_both_live and
+                a0100_success is False and
+                b0100_success is False
+        )
+        both_alive = draw_both_live
+        a0100_win = (a0100_success is True) and (b0100_success is False)
+        a0100_lose = (a0100_success is False) and (b0100_success is True)
+
+        self.tb_writer.add_scalar("episode_result/both_dead", int(both_dead), self.tb_step)
+        self.tb_writer.add_scalar("episode_result/both_alive", int(both_alive), self.tb_step)
+        self.tb_writer.add_scalar("episode_result/A0100_win", int(a0100_win), self.tb_step)
+        self.tb_writer.add_scalar("episode_result/A0100_lose", int(a0100_lose), self.tb_step)
+
+        # 简洁日志输出
+        if both_dead:
+            result_str = "both_dead"
+        elif both_alive:
+            result_str = "both_alive"
+        elif a0100_win:
+            result_str = "A0100_win"
+        elif a0100_lose:
+            result_str = "A0100_lose"
+        else:
+            result_str = "unknown"
+
+        logging.critical(f"[Episode #{self.tb_step}] Result: {result_str}")
 
     def _pack(self, data: Dict[str, Any]) -> np.ndarray:
         """Pack seperated key-value dict into grouped np.ndarray"""

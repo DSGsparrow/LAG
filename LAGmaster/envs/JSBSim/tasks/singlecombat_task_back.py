@@ -241,4 +241,5 @@ class HierarchicalSingleCombatShootMissileBackTask(HierarchicalSingleCombatTask,
                 self.remaining_missiles[agent_id] -= 1
                 self.launch[agent_id] = True
                 logging.info(f'{agent_id} launch mission! '
-                             f'Total Steps={env.current_step}, obs={obs}, state={state}, current_reward={env.cumulative_reward}')
+                             # f'Total Steps={env.current_step}, obs={obs}, state={state}, current_reward={env.cumulative_reward}')
+                             f'Total Steps={env.current_step}, current_reward={env.cumulative_reward}')
