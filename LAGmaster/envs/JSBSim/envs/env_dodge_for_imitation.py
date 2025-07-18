@@ -270,7 +270,8 @@ class EnvImitation(BaseEnv):
         enm_actions = [
             delta_value[0] / 1000,  # delta_altitude, 单位 km
             in_range_rad(delta_value[1]),  # delta_heading, 单位 rad
-            delta_value[2] / 340  # delta_speed, 单位 Mach
+            delta_value[2] / 340,  # delta_speed, 单位 Mach
+            self.task._shoot_action['B0100']
         ]
         enm_obs = self.task.get_obs(self, 'B0100')  # 状态：应为 np.ndarray
 
