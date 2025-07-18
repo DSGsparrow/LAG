@@ -14,7 +14,7 @@ import os
 import logging
 
 from LAGmaster.envs.JSBSim.envs import SingleCombatEnvShootSelfPlay
-from net import CustomImitationShootBackPolicy, CustomActorCriticShootBackPolicy, CustomImitationPolicy
+from net import CustomImitationShootBackPolicy, CustomActorCriticShootBackPolicy, PPOCustomImitationPolicy
 
 # ========== 1. 适配 SB3 的自定义环境 ==========
 class SB3SingleCombatEnv(gymnasium.Env):
@@ -189,7 +189,7 @@ if __name__ == "__main__":
 
     if os.path.exists(model_path):
         policy_kwargs = dict(
-            features_extractor_class=CustomImitationPolicy,
+            features_extractor_class=PPOCustomImitationPolicy,
             features_extractor_kwargs={}
         )
         print("✅ 加载已有模型继续训练...")
@@ -202,7 +202,7 @@ if __name__ == "__main__":
         )
     else:
         policy_kwargs = dict(
-            features_extractor_class=CustomImitationPolicy,
+            features_extractor_class=PPOCustomImitationPolicy,
             features_extractor_kwargs={}
         )
 
