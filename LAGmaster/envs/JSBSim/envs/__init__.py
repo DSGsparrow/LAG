@@ -9,3 +9,4 @@ from .singlecombat_env_shoot_back import SingleCombatEnvShootBack
 from .singlecombat_env_guide import SingleCombatEnvGuide
 from .singlecombat_env_shoot_solo import SingleCombatEnvShootSolo
 from .singlecombat_env_shoot_selfplay import SingleCombatEnvShootSelfPlay
+from .env_dodge_for_imitation import EnvImitation

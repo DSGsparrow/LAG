@@ -1,0 +1,86 @@
+# task config
+task: task_for_imitation
+
+# file path
+render_path: "./test_result/render/dodge_for_imitation"
+state_path: "./test_result/result/states_imi_dodge2.jsonl"
+
+# shoot area
+shoot_distance_center: 7000
+shoot_distance_sigma: 1000
+shoot_angle_center: 0
+shoot_angle_sigma: 10
+
+# shoot decide method
+shoot_decide_method: "bool"
+
+# simulation config
+sim_freq: 60
+agent_interaction_steps: 12 # step 0.2s
+
+# termination config
+max_steps: 1000             # episode length: 200s
+altitude_limit: 2500
+acceleration_limit_x: 10.0
+acceleration_limit_y: 10.0
+acceleration_limit_z: 10.0
+
+# aircraft config
+use_baseline: true
+baseline_type: pursue
+aircraft_configs: {
+  A0100: {
+    color: Red,
+    model: f16,
+    init_state: {
+      ic_long_gc_deg: 120.0,
+      ic_lat_geod_deg: 60.0,
+      ic_h_sl_ft: 20000,
+      ic_psi_true_deg: 0,
+      ic_u_fps: 800.0,
+    },
+    missile: 0
+  },
+  B0100: {
+    color: Blue,
+    model: f16,
+    init_state: {
+      ic_h_sl_ft: 20000,
+      ic_lat_geod_deg: 60.2,
+      ic_long_gc_deg: 120.0,
+      ic_psi_true_deg: 180.0,
+      ic_u_fps: 800.0,
+    },
+    missile: 1,
+  }
+}
+
+max_attack_angle: 45        # unit: degree
+max_attack_distance: 14000  # unit: m
+min_attack_interval: 125     # unit: step
+
+# (lontitude, latitude, altitude)
+battle_field_center: [120.0, 60.0, 0.0]
+
+# reward config
+#SelfPlayShootPenaltyReward_scale: 20
+
+SelfPlayPostureReward_scale: 30
+SelfPlayPostureReward_potential: true
+
+#SelfPlayShootEventDrivenReward_scale: 300
+#SelfPlayShootEventDrivenReward_potential: true
+
+SelfPlayShootGapPenalty_scale: 20
+
+#SelfPlayShootPosturePenalty_scale: 15
+
+#SelfPlayShootWaitReward_scale: 0.05
+
+#SelfPlayEnemyPostureReward_scale: 0.1
+
+SelfPlayShootMissileRewardWithDistance_scale: 150
+SelfPlayShootMissileRewardWithDistance_potential: true
+
+AltitudeReward_scale: 10
+

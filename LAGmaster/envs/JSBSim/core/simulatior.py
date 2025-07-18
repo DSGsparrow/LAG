@@ -367,7 +367,7 @@ class MissileSimulator(BaseSimulator):
         # missile parameters (for AIM-9L)
         self._g = 9.81      # gravitational acceleration
         self._t_max = 60    # time limitation of missile life
-        self._t_thrust = 3  # time limitation of engine
+        self._t_thrust = 5  # time limitation of engine
         self._Isp = 120     # average specific impulse
         self._Length = 2.87
         self._Diameter = 0.127

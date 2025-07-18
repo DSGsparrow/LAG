@@ -3,11 +3,7 @@ import numpy as np
 from gymnasium import spaces
 from typing import Literal
 import sys
-import parser
 import re
-import os
-import datetime
-import uuid
 
 from stable_baselines3.common.vec_env.util import obs_space_info
 from stable_baselines3 import PPO
@@ -371,6 +367,7 @@ class PursueAgent(BaselineAgent):
         enm_x, enm_y, enm_z = sim.enemies[0].get_position()
         # delta altitude
         delta_altitude = enm_z - ego_z
+        delta_altitude = enm_z - ego_z + 500
         # delta heading
         ego_v = np.linalg.norm([ego_vx, ego_vy])
         delta_x, delta_y = enm_x - ego_x, enm_y - ego_y
@@ -382,6 +379,11 @@ class PursueAgent(BaselineAgent):
         # delta velocity
         delta_velocity = sim.enemies[0].get_property_value(c.velocities_u_mps) - \
                          sim.get_property_value(c.velocities_u_mps)
+        if sim.num_left_missiles > 0:
+            delta_velocity = 400 - sim.get_property_value(c.velocities_u_mps)
+        else:
+            pass
+
         return np.array([delta_altitude, delta_heading, delta_velocity])
 
 
@@ -1063,8 +1065,6 @@ class ShootTeacherAgent(BaselineAgent):
 
         self.trajectory = []  # 当前 episode 的状态-动作序列
         self.episode_id = 0
-        self.save_dir = "render_train/dodge2/imitation"
-        os.makedirs(self.save_dir, exist_ok=True)
 
         # self.reset()
 
@@ -1126,23 +1126,6 @@ class ShootTeacherAgent(BaselineAgent):
 
     def reset(self):
         self.rnn_states = np.zeros((1, 1, 128))
-
-        # 回合结束，保存当前 trajectory
-        # if self.trajectory:
-        #     obs_arr = np.array([pair[0] for pair in self.trajectory])
-        #     action_arr = np.array([pair[1] for pair in self.trajectory])
-        #
-        #     # 自动生成文件名
-        #     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        #     unique_id = uuid.uuid4().hex[:6]  # 6位短 UUID
-        #     filename = f"expert_ep_{timestamp}_{unique_id}.npz"
-        #     path = os.path.join(self.save_dir, filename)
-        #     np.savez_compressed(path, obs=obs_arr, action=action_arr)
-        #
-        #     # print(f"[Saved] Episode {self.episode_id:04d} | Steps: {len(self.trajectory)} | Path: {path}")
-        #
-        #     self.episode_id += 1
-        # self.trajectory.clear()  # 准备下一回合
 
     def get_action(self, sim: AircraftSimulator):
         delta_value = self.set_delta_value(sim)

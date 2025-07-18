@@ -2,7 +2,7 @@ import numpy as np
 import logging
 import gymnasium
 from gymnasium import spaces
-from LAGmaster.envs.JSBSim.envs import SingleCombatEnvShootSelfPlay
+from LAGmaster.envs.JSBSim.envs import EnvImitation
 
 
 class SB3SingleCombatEnv(gymnasium.Env):
@@ -10,7 +10,7 @@ class SB3SingleCombatEnv(gymnasium.Env):
 
     def __init__(self, env_id, config_name):
         super(SB3SingleCombatEnv, self).__init__()
-        self.env = SingleCombatEnvShootSelfPlay(config_name, env_id)  # 你的原始环境
+        self.env = EnvImitation(config_name, env_id)  # 你的原始环境
         # obs_shape = self.env.get_obs().shape[0]  # 获取观测空间维度
         # act_shape = self.env.get_action_space().shape[0]  # 获取动作空间维度
         # 继承原始环境的动作空间和观察空间
@@ -114,4 +114,4 @@ def setup_logging(env_id=0, log_file=None):
 # 多进程环境创建
 def make_env(env_id, log_file):
     setup_logging(env_id, log_file)
-    return SB3SingleCombatEnv(env_id, config_name='1v1/ShootMissile/HierarchySelfPlayShoot')
+    return SB3SingleCombatEnv(env_id, config_name='1v1/ShootMissile/DodgeForImitation')

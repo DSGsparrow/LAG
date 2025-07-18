@@ -6,3 +6,4 @@ from .singlecombat_task_back import SingleCombatShootMissileBackTask, Hierarchic
 from .singlecombat_task_guide import SingleCombatTaskGuide, HierarchicalSingleCombatTaskGuide
 from .singlecombat_task_solo import HierarchicalSingleCombatShootMissileSoloTask
 from .dodge_unknown_missle_task import HierarchicalSingleCombatDodgeUnknownMissileTask, HierarchicalSingleCombatDodgeKnownMissileTask
+from .task_for_imitation import TaskForImitation

@@ -1,25 +1,27 @@
 def threat_distance(distance):
-    if distance > 8000:
+    if distance > 10000:
         return 0  # 无威胁
-    elif 6000 < distance <= 8000:
+    elif 8000 < distance <= 10000:
         return 1  # 中距（低威胁，特殊处理）
+    elif 6000 < distance <= 8000:
+        return 2  # 中距（低威胁，特殊处理）
     else:
         return 3  # 高威胁（近距）
 
 def threat_angle(angle):
     if angle > 50:
         return 0
-    elif 15 < angle <= 50:
+    elif 20 < angle <= 50:
         return 1
-    elif 5 < angle <= 15:
+    elif 10 < angle <= 20:
         return 2
     else:
         return 3
 
 def threat_speed(speed):
-    if speed < 250:
+    if speed < 200:
         return 1
-    elif 250 <= speed <= 340:
+    elif 200 <= speed <= 340:
         return 2
     else:
         return 3
@@ -30,7 +32,7 @@ def threat_alt_diff(alt_diff):
     elif 0 <= alt_diff <= 2000:
         return 3
     else:
-        return 1
+        return 2
 
 def fuzzy_should_attack(distance, angle, speed, alt_diff):
     dist_threat = threat_distance(distance)
