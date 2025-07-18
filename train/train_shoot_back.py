@@ -13,7 +13,7 @@ import argparse
 import os
 import logging
 
-from LAGmaster.envs.JSBSim.envs import SingleCombatEnvShootBack
+from LAGmaster.envs.JSBSim.envs import SingleCombatEnvShootSelfPlay
 from net import CustomImitationShootBackPolicy, CustomActorCriticShootBackPolicy, CustomImitationPolicy
 
 # ========== 1. 适配 SB3 的自定义环境 ==========
@@ -22,7 +22,7 @@ class SB3SingleCombatEnv(gymnasium.Env):
 
     def __init__(self, env_id, config_name):
         super(SB3SingleCombatEnv, self).__init__()
-        self.env = SingleCombatEnvShootBack(config_name, env_id)  # 你的原始环境
+        self.env = SingleCombatEnvShootSelfPlay(config_name, env_id)  # 你的原始环境
         # obs_shape = self.env.get_obs().shape[0]  # 获取观测空间维度
         # act_shape = self.env.get_action_space().shape[0]  # 获取动作空间维度
         # 继承原始环境的动作空间和观察空间
@@ -175,15 +175,15 @@ def setup_logging(env_id=0, log_file=None):
 # =================== 训练主程序 ===================
 if __name__ == "__main__":
     # 参数
-    num_envs = 16
-    log_file = "./train/result/train_shoot_back2.log"
+    num_envs = 1
+    log_file = "./train/result/train_shoot_back3.log"
     model_path = "" # "./trained_model/shoot_imitation/ppo_air_combat_imi.zip"
     pretrained_pt_path = ""  # "./trained_model/imitation_shoot/imitation_pretrained_pytorch.pt"
 
     # 多进程环境创建
     def make_env(env_id):
         setup_logging(env_id, log_file)
-        return SB3SingleCombatEnv(env_id, config_name='1v1/ShootMissile/HierarchyVsBaselineShootBack')
+        return SB3SingleCombatEnv(env_id, config_name='1v1/ShootMissile/HierarchySelfPlayShoot')
 
     env = SubprocVecEnv([lambda env_id=i: make_env(env_id) for i in range(num_envs)])
 
@@ -272,7 +272,7 @@ if __name__ == "__main__":
     # 创建 checkpoint 回调，每 10 万步保存一次
     checkpoint_callback = CheckpointCallback(
         save_freq=10_000,  # 每 1*num_env 万步保存一次
-        save_path="./trained_model/shoot_back_checkpoints/",  # 保存文件夹
+        save_path="./trained_model/shoot_back3/shoot_back_checkpoints/",  # 保存文件夹
         name_prefix="ppo_air_combat_shoot"  # 文件名前缀
     )
 
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     )
 
     # 最终训练完成后保存一次完整模型
-    model.save("./trained_model/shoot_back/ppo_air_combat")
+    model.save("./trained_model/shoot_back3/ppo_air_combat")
 
     # 关闭环境
     env.close()

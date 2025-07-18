@@ -379,24 +379,6 @@ class MissileSimulator(BaseSimulator):
         self._Rc = 300      # radius of explosion, unit: m
         self._v_min = 150   # minimun velocity, unit: m/s
 
-        # # 超视距制导参数
-        # self._midcourse_flag = True  # 中段制导阶段
-        # self._data_link_interval = 2  # 数据链更新间隔秒数
-        #
-        # self._g = 9.81  # gravitational acceleration
-        # self._t_max = 100  # time limitation of missile life
-        # self._t_thrust = 15  # time limitation of engine
-        # self._Isp = 280  # average specific impulse
-        # self._Length = 2.87
-        # self._Diameter = 0.127
-        # self._cD = 0.25  # aerodynamic drag factor
-        # self._m0 = 160  # mass, unit: kg
-        # self._dm = 8  # mass loss rate, unit: kg/s
-        # self._K = 3  # proportionality constant of proportional navigation
-        # self._nyz_max = 30  # max overload
-        # self._Rc = 300  # radius of explosion, unit: m
-        # self._v_min = 250  # minimun velocity, unit: m/s
-
     @property
     def is_alive(self):
         """Missile is still flying"""
@@ -406,6 +388,10 @@ class MissileSimulator(BaseSimulator):
     def is_success(self):
         """Missile has hit the target"""
         return self.__status == MissileSimulator.HIT
+
+    @property
+    def is_miss(self):
+        return self.__status == MissileSimulator.MISS
 
     @property
     def is_done(self):
@@ -479,11 +465,11 @@ class MissileSimulator(BaseSimulator):
         action, distance = self._guidance()
         self._distance_increment.append(distance > self._distance_pre)
         self._distance_pre = distance
-        if distance < self._Rc and self.target_aircraft.is_alive:
-            self.__status = MissileSimulator.HIT
+        if distance < self._Rc:  # and self.target_aircraft.is_alive:
             self.target_aircraft.shotdown()
+            self.__status = MissileSimulator.HIT
         elif (self._t > self._t_max) or (np.linalg.norm(self.get_velocity()) < self._v_min and self._t > self._t_thrust) \
-                or np.sum(self._distance_increment) >= self._distance_increment.maxlen or not self.target_aircraft.is_alive:
+                or np.sum(self._distance_increment) >= self._distance_increment.maxlen:  # or not self.target_aircraft.is_alive:
             self.__status = MissileSimulator.MISS
         else:
             self._state_trans(action)

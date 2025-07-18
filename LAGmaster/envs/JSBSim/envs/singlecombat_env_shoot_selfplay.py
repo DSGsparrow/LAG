@@ -151,13 +151,19 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
 
     def set_random_enemy(self):
         """设置当前敌机信息"""
-        init_ego_alt = self.np_random.uniform(14000., 30000.)
-        init_ego_speed = self.np_random.uniform(400., 1000.)
-        init_enm_alt = self.np_random.uniform(14000., 30000.)
-        init_enm_speed = self.np_random.uniform(400., 1000.)
+        init_ego_alt = self.np_random.uniform(6000., 10000.)
+        init_ego_speed = self.np_random.uniform(250., 360.)
+        init_enm_alt = self.np_random.uniform(6000., 10000.)
+        init_enm_speed = self.np_random.uniform(250., 360.)
         init_enm_heading = self.np_random.uniform(0., 360.)
-        init_enm_distance = self.np_random.uniform(9000., 15000.)
-        init_enm_angle = self.np_random.uniform(0., 360.)
+        init_enm_distance = self.np_random.uniform(12000., 15000.)
+        init_enm_angle = self.np_random.uniform(75., 285.)
+
+        init_ego_alt = init_ego_alt / 0.304
+        init_ego_speed = init_ego_speed / 0.304
+        init_enm_alt = init_enm_alt / 0.304
+        init_enm_speed = init_enm_speed / 0.304
+
 
         init_enm_lat, init_enm_lon = calculate_enemy_position(init_enm_distance, init_enm_angle)
 
@@ -274,7 +280,7 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
         dones = self._pack(dones)
         rewards = self._pack(rewards)
 
-        ego_done = dones[0] and dones[1]
+        ego_done = dones[0]  # all(all(inner) for inner in dones)
         ego_reward = rewards[0]
 
         self.cumulative_reward += ego_reward.item()

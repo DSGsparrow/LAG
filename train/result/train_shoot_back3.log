@@ -1,0 +1,38 @@
+2025-07-17 21:53:44,386 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back3.log
+2025-07-17 21:53:46,249 - INFO [ENV 0] - A0100 launch mission! Total Steps=2, current_reward=0.0
+2025-07-17 21:53:46,268 - INFO [ENV 0] - A0100 launch mission! Total Steps=3, current_reward=0.0
+2025-07-17 21:53:49,368 - INFO [ENV 0] - render_result: {'enm_distance': 8221.220556930348, 'enm_alt': 23127.173394281912, 'enm_lat': 60.045543102160664, 'enm_lon': 120.11600368016488, 'enm_speed': 814.7961863138189, 'enm_heading': 20.96594231483138, 'ego_alt': 21166.899760720997, 'ego_lat': 60, 'ego_lon': 120, 'ego_speed': 654.0923148734155, 'ego_heading': 0, 'enm_angle': 51.83834614222927, 'success': False, 'reward': -335.0330050479354, 'total_steps': 168, 'state': {'my_lat': 119.9822910764103, 'my_lon': 60.05733841263389, 'my_alt': 6520.807857351405, 'my_x': 6394.888386279028, 'my_y': -987.4534901718802, 'my_z': 6517.531794890119, 'my_vx': 194.8417758644172, 'my_vy': -44.92417561691448, 'my_vz': 2.7287431191322105, 'enemy_lat': 120.13162840172417, 'enemy_lon': 60.01423700431089, 'enemy_alt': 5577.882605401549, 'enemy_x': 1594.8746920830667, 'enemy_y': 7348.106944671443, 'enemy_z': 5573.465070808774, 'enemy_vx': -61.92919666222286, 'enemy_vy': 246.09458880916034, 'enemy_vz': 28.656592764159182}}
+2025-07-17 21:53:49,402 - INFO [ENV 0] - A0100 launch mission! Total Steps=1, current_reward=0
+2025-07-17 21:53:49,419 - INFO [ENV 0] - A0100 launch mission! Total Steps=2, current_reward=0.0
+2025-07-17 21:53:51,639 - INFO [ENV 0] - render_result: {'enm_distance': 8354.53935308488, 'enm_alt': 22023.355846687668, 'enm_lat': 60.0703914149242, 'enm_lon': 119.94833543003922, 'enm_speed': 729.9208959377252, 'enm_heading': 125.80457992981748, 'ego_alt': 17847.305088900277, 'ego_lat': 60, 'ego_lon': 120, 'ego_speed': 483.13376364004006, 'ego_heading': 0, 'enm_angle': 339.85881679848455, 'success': False, 'reward': -355.3123298179617, 'total_steps': 122, 'state': {'my_lat': 120.01324870734273, 'my_lon': 60.0321631092634, 'my_alt': 5376.003515188104, 'my_x': 3586.466018279387, 'my_y': 739.1811339653559, 'my_z': 5374.954169027396, 'my_vx': 156.61186183221787, 'my_vy': 29.802822549544462, 'my_vz': 10.727082062181383, 'enemy_lat': 120.02828606236747, 'enemy_lon': 60.07576380307949, 'enemy_alt': 5864.898802648714, 'enemy_x': 8449.157163879307, 'enemy_y': 1576.1963480181362, 'enemy_z': 5859.118199995981, 'enemy_vx': 231.26068626825568, 'enemy_vy': -117.96801011873538, 'enemy_vz': 27.62583435634112}}
+2025-07-17 21:53:51,672 - INFO [ENV 0] - A0100 launch mission! Total Steps=1, current_reward=0
+2025-07-17 21:53:51,690 - INFO [ENV 0] - A0100 launch mission! Total Steps=2, current_reward=0.0
+2025-07-17 21:53:52,168 - INFO [ENV 0] - render_result: {'enm_distance': 3633.747800279002, 'enm_alt': 24816.645323076606, 'enm_lat': 59.99011114146166, 'enm_lon': 120.06204630332643, 'enm_speed': 731.1436125114506, 'enm_heading': 146.1658374560073, 'ego_alt': 22784.042400391772, 'ego_lat': 60, 'ego_lon': 120, 'ego_speed': 530.1512503347974, 'ego_heading': 0, 'enm_angle': 107.62282434487338, 'success': False, 'reward': -449.96004367690824, 'total_steps': 28, 'state': {'my_lat': 119.99982524088759, 'my_lon': 60.008055381759156, 'my_alt': 6865.7046738763875, 'my_x': 898.4343390054191, 'my_y': -9.759656069635412, 'my_z': 6865.641509662316, 'my_vx': 164.2853256105694, 'my_vy': -1.5486281288396302, 'my_vz': 21.52321869323624, 'enemy_lat': 120.07714582829863, 'enemy_lon': 59.98161664548464, 'enemy_alt': 7418.676363652531, 'enemy_x': -2047.9948593726663, 'enemy_y': 4312.1212635690945, 'enemy_z': 7416.895898094825, 'enemy_vx': -131.06983007881038, 'enemy_vy': 195.32306670130708, 'enemy_vz': 45.68123835044286}}
+2025-07-17 21:53:52,226 - INFO [ENV 0] - A0100 launch mission! Total Steps=3, current_reward=0.0
+2025-07-17 21:53:52,254 - INFO [ENV 0] - A0100 launch mission! Total Steps=5, current_reward=0.0
+2025-07-17 21:53:54,294 - INFO [ENV 0] - render_result: {'enm_distance': 5077.249025317342, 'enm_alt': 16254.833463240051, 'enm_lat': 60.04536453174978, 'enm_lon': 120.00866918422223, 'enm_speed': 997.8463057324774, 'enm_heading': 221.642098610562, 'ego_alt': 17405.654745057247, 'ego_lat': 60, 'ego_lon': 120, 'ego_speed': 959.3937631639546, 'ego_heading': 0, 'enm_angle': 5.459702449495563, 'success': False, 'reward': -253.74671401186777, 'total_steps': 112, 'state': {'my_lat': 120.00008188104528, 'my_lon': 60.05731592622183, 'my_alt': 5332.977880020556, 'my_x': 6391.060143258669, 'my_y': 4.564861056834388, 'my_z': 5329.7812197680405, 'my_vx': 293.550793219171, 'my_vy': -34.00380360111022, 'my_vz': 0.6320706524411356, 'enemy_lat': 119.97395921527146, 'enemy_lon': 60.073005903777556, 'enemy_alt': 4025.610381875217, 'enemy_x': 8139.212730163616, 'enemy_y': -1450.7858820788583, 'enemy_z': 4020.2602433000834, 'enemy_vx': 270.05290840017886, 'enemy_vy': -76.33343227758054, 'enemy_vz': 56.83531551349843}}
+2025-07-17 21:53:54,330 - INFO [ENV 0] - A0100 launch mission! Total Steps=1, current_reward=0
+2025-07-17 21:53:54,366 - INFO [ENV 0] - A0100 launch mission! Total Steps=3, current_reward=0.0
+2025-07-17 21:58:13,833 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back3.log
+2025-07-17 21:58:15,662 - INFO [ENV 0] - A0100 launch mission! Total Steps=1, current_reward=0
+2025-07-17 21:58:15,663 - CRITICAL [ENV 0] - A0100 altitude is too low. Total Steps=1
+2025-07-17 21:58:15,663 - CRITICAL [ENV 0] - B0100 altitude is too low. Total Steps=1
+2025-07-17 21:59:12,649 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back3.log
+2025-07-17 21:59:14,408 - CRITICAL [ENV 0] - A0100 altitude is too low. Total Steps=1
+2025-07-17 21:59:14,408 - CRITICAL [ENV 0] - B0100 altitude is too low. Total Steps=1
+2025-07-17 22:05:31,621 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back3.log
+2025-07-17 22:05:33,454 - INFO [ENV 0] - A0100 launch mission! Total Steps=1, current_reward=0
+2025-07-17 22:05:33,455 - CRITICAL [ENV 0] - A0100 altitude is too low. Total Steps=1
+2025-07-17 22:05:33,456 - CRITICAL [ENV 0] - B0100 altitude is too low. Total Steps=1
+2025-07-17 22:06:21,991 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back3.log
+2025-07-17 22:06:58,340 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back3.log
+2025-07-17 22:07:00,164 - INFO [ENV 0] - A0100 launch mission! Total Steps=1, current_reward=0
+2025-07-17 22:07:38,392 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back3.log
+2025-07-17 22:07:57,011 - INFO [ENV 0] - A0100 launch mission! Total Steps=3, current_reward=0.0
+2025-07-17 22:07:57,029 - INFO [ENV 0] - A0100 launch mission! Total Steps=4, current_reward=0.0
+2025-07-17 22:09:34,288 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back3.log
+2025-07-17 22:09:36,115 - INFO [ENV 0] - A0100 launch mission! Total Steps=1, current_reward=0
+2025-07-17 22:09:36,194 - INFO [ENV 0] - A0100 launch mission! Total Steps=6, current_reward=0.0
+2025-07-17 22:12:18,607 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back3.log
+2025-07-17 22:12:20,411 - INFO [ENV 0] - A0100 launch mission! Total Steps=1, current_reward=0
+2025-07-17 22:12:20,465 - INFO [ENV 0] - A0100 launch mission! Total Steps=4, current_reward=0.0

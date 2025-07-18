@@ -21,3 +21,4 @@ from .selfplay.shoot_event_driven_reward import SelfPlayShootEventDrivenReward
 from .selfplay.shoot_gap_penalty import SelfPlayShootGapPenalty
 from .selfplay.posture_reward import SelfPlayPostureReward
 from .selfplay.enemy_posture_reward import SelfPlayEnemyPostureReward
+from .selfplay.shoot_event_driven_reward_with_distance import SelfPlayShootMissileRewardWithDistance

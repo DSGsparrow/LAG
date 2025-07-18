@@ -10,7 +10,7 @@ from ..reward_functions import ShootPenaltyReward, ShootGapPenaltyReward, Relati
 from ..reward_functions import AltitudeGuideReward, SpeedGuideReward
 from ..reward_functions import (SelfPlayShootPenaltyReward, SelfPlayPostureReward, SelfPlayShootEventDrivenReward,
                                 SelfPlayShootGapPenalty, SelfPlayShootPosturePenalty,
-                                SelfPlayShootWaitReward, SelfPlayEnemyPostureReward)
+                                SelfPlayShootWaitReward, SelfPlayEnemyPostureReward, SelfPlayShootMissileRewardWithDistance)
 from ..termination_conditions import ExtremeState, LowAltitude, Overload, Timeout, DodgeMissileSafeReturn
 from ..termination_conditions import SafeReturn, ShootSafeReturn
 from ..reward_functions import EndAltitudeReward
@@ -109,14 +109,15 @@ class HierarchicalSingleCombatShootMissileBackTask(HierarchicalSingleCombatTask,
         HierarchicalSingleCombatTask.__init__(self, config)
 
         self.reward_functions = [
-            SelfPlayShootPenaltyReward(self.config),
+            # SelfPlayShootPenaltyReward(self.config),  # 打弹就有惩罚，且引诱对方打弹有奖励，零和
             SelfPlayPostureReward(self.config),
-            SelfPlayShootEventDrivenReward(self.config),
-            SelfPlayShootGapPenalty(self.config),
-            SelfPlayShootPosturePenalty(self.config),
-            SelfPlayShootWaitReward(self.config),
-            SelfPlayEnemyPostureReward(self.config),
-            AltitudeReward(self.config),
+            # SelfPlayShootEventDrivenReward(self.config),
+            SelfPlayShootGapPenalty(self.config),  # 打弹间隔
+            # SelfPlayShootPosturePenalty(self.config),  # 打弹时姿势
+            # SelfPlayShootWaitReward(self.config),  # 等待奖励
+            # SelfPlayEnemyPostureReward(self.config),  # 敌方躲弹
+            AltitudeReward(self.config),  # 防坠地
+            SelfPlayShootMissileRewardWithDistance(self.config)
         ]
 
         self.termination_conditions = [
