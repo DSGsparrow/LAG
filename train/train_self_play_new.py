@@ -21,13 +21,13 @@ def parse_args():
     parser.add_argument("--target_state", type=int, default=0)
 
     # 基本路径
-    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_selfplay_new3.log")
+    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_static.log")
     parser.add_argument("--model_path", type=str, default="")
     parser.add_argument("--pretrained_pt_path", type=str, default="")
-    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_selfplay3/shoot_solo_checkpoints/")
+    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_static/checkpoints/")
     parser.add_argument("--tb_log", type=str, default="./ppo_air_combat_sp_tb2/")
-    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_selfplay3/ppo_air_combat")
-    parser.add_argument("--model_dir", type=str, default="./model_pool/shoot_selfplay_3")
+    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_static")
+    parser.add_argument("--model_dir", type=str, default="./model_pool/shoot_static")
 
     # 模型路径
     parser.add_argument("--fly_model_path", type=str, default="trained_model/shoot_back_t2/ppo_air_combat.zip")
@@ -43,12 +43,11 @@ def parse_args():
     parser.add_argument("--warmup_action", nargs='+', type=float, default=[1, 2, 1, 0.0, 0.0])
 
     # 多线程
-    parser.add_argument("--num_envs", type=int, default=1)
+    parser.add_argument("--num_envs", type=int, default=16)
 
     # 训练参数
-    parser.add_argument("--total_timesteps", type=int, default=5_000_00)
-    parser.add_argument("--save_freq", type=int, default=4_000)
-    parser.add_argument("--save_interval", type=int, default=2500)
+    parser.add_argument("--total_timesteps", type=int, default=3_000_000)
+    parser.add_argument("--save_interval", type=int, default=10_000)
     parser.add_argument("--learning_rate", type=float, default=3e-4)
     parser.add_argument("--n_steps", type=int, default=2048)
     parser.add_argument("--batch_size", type=int, default=64)
@@ -154,7 +153,7 @@ def main_shoot_static():
     # 创建 Checkpoint 回调：每隔 save_interval 步保存一次模型
     checkpoint_callback = CheckpointCallback(
         save_freq=args.save_interval,
-        save_path=args.model_dir,
+        save_path=args.checkpoint_path,
         name_prefix="ppo_model"
     )
 
@@ -193,7 +192,7 @@ def main_shoot_static():
     )
 
     # 最后再保存一次模型
-    final_model_path = os.path.join(args.model_dir, "final_model.zip")
+    final_model_path = os.path.join(args.save_model_path, "final_model.zip")
     model.save(final_model_path)
     print(f"✅ 最终模型已保存到 {final_model_path}")
 

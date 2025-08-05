@@ -1,5 +1,6 @@
 from envs.JSBSim.reward_functions.reward_function_base import BaseRewardFunction
 import numpy as np
+import logging
 
 
 class SelfPlayShootMissileRewardWithDistance(BaseRewardFunction):
@@ -33,28 +34,15 @@ class SelfPlayShootMissileRewardWithDistance(BaseRewardFunction):
                 # 获取未命中时的距离
                 d = missile.target_distance  # 单位：米
 
-                additional_reward = 2 * np.exp(-np.log(2) / 300 * d)
-                # 300是1，600是0.5
+                additional_reward = 2 * np.exp(-np.log(2) / 2000 * d)
+                # 2000是1，4000是0.5, 6000是0.25， 8800 0.1
+
+                additional_reward = np.clip(additional_reward, 0, 1)
 
                 additional_reward = additional_reward * 1.5
 
-                # if d >= 600:
-                #     additional_reward = - (d - 600) * k + 0.75
-                #     additional_reward = np.clip(additional_reward, 0, 0.75)
-                #
-                #
-                # # 根据距离给额外补偿奖励（最多补偿 0.75）
-                # if d > 500:
-                #     additional_reward = 0.0
-                # elif 300 < d <= 500:
-                #     # 在 [300, 500] 范围线性增长，靠近 300 米时补偿大
-                #     # 300 → 0.75，500 → 0
-                #     additional_reward = 0.75 * (500 - d) / 200
-                # else:
-                #     # d ≤ 300，本应是命中，不应该走到这里
-                #     additional_reward = 0.0
-
                 reward += base_penalty + additional_reward
+                logging.critical(f'missile final distance: {d}, shoot reward: {reward * 150}')
 
         return self._process(reward, agent_id)
 

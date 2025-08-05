@@ -112,7 +112,7 @@ class HierarchicalSingleCombatShootMissileBackTask(HierarchicalSingleCombatTask,
             # SelfPlayShootPenaltyReward(self.config),  # 打弹就有惩罚，且引诱对方打弹有奖励，零和
             SelfPlayPostureReward(self.config),
             # SelfPlayShootEventDrivenReward(self.config),
-            SelfPlayShootGapPenalty(self.config),  # 打弹间隔
+            # SelfPlayShootGapPenalty(self.config),  # 打弹间隔
             # SelfPlayShootPosturePenalty(self.config),  # 打弹时姿势
             # SelfPlayShootWaitReward(self.config),  # 等待奖励
             # SelfPlayEnemyPostureReward(self.config),  # 敌方躲弹

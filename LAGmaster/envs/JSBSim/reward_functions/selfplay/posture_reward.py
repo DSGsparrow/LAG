@@ -35,25 +35,25 @@ class SelfPlayPostureReward(BaseRewardFunction):
         """
         new_reward = 0
 
-        if env.agents[agent_id].check_missile_warning or env.agents[agent_id].check_missile_launching:
-            new_reward = 0
-            orientation_reward = 0
-            range_reward = 0
-
-        else:
-            # feature: (north, east, down, vn, ve, vd)
-            ego_feature = np.hstack([env.agents[agent_id].get_position(),
-                                     env.agents[agent_id].get_velocity()])
-            # x = env.agents[agent_id].enemies[0].get_position()
-            # v = env.agents[agent_id].enemies[0].get_velocity()
-            # missile_num = task.remaining_missiles[agent_id]
-            for enm in env.agents[agent_id].enemies:
-                enm_feature = np.hstack([enm.get_position(),
-                                         enm.get_velocity()])
-                AO, TA, R = get_AO_TA_R(ego_feature, enm_feature)
-                orientation_reward = self.orientation_fn(AO, TA)
-                range_reward = self.range_fn(R / 1000)
-                new_reward += orientation_reward * range_reward
+        # if env.agents[agent_id].check_missile_warning or env.agents[agent_id].check_missile_launching:
+        #     new_reward = 0
+        #     orientation_reward = 0
+        #     range_reward = 0
+        #
+        # else:
+        # feature: (north, east, down, vn, ve, vd)
+        ego_feature = np.hstack([env.agents[agent_id].get_position(),
+                                 env.agents[agent_id].get_velocity()])
+        # x = env.agents[agent_id].enemies[0].get_position()
+        # v = env.agents[agent_id].enemies[0].get_velocity()
+        # missile_num = task.remaining_missiles[agent_id]
+        for enm in env.agents[agent_id].enemies:
+            enm_feature = np.hstack([enm.get_position(),
+                                     enm.get_velocity()])
+            AO, TA, R = get_AO_TA_R(ego_feature, enm_feature)
+            orientation_reward = self.orientation_fn(AO, TA)
+            range_reward = self.range_fn(R / 1000)
+            new_reward += orientation_reward * range_reward
 
         return self._process(new_reward, agent_id, (orientation_reward, range_reward))
 

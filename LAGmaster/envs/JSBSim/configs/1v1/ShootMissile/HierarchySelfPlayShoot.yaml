@@ -73,7 +73,7 @@ SelfPlayPostureReward_potential: true
 #SelfPlayShootEventDrivenReward_scale: 300
 #SelfPlayShootEventDrivenReward_potential: true
 
-SelfPlayShootGapPenalty_scale: 20
+#SelfPlayShootGapPenalty_scale: 20
 
 #SelfPlayShootPosturePenalty_scale: 15
 
