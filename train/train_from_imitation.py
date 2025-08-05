@@ -6,6 +6,9 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.logger import configure
+from stable_baselines3.common.utils import get_schedule_fn
+
+from torch.utils.tensorboard import SummaryWriter
 
 from net.net_imitation_for_ppo import PPOGRUPolicy, PPOMLPPolicy, MLPPolicy, GRUPolicy
 from env_factory.env_factory_from_imitation import make_env
@@ -67,7 +70,7 @@ def main_gru(
     )
 
     # 5. 将预训练参数手动赋值到 SB3 模型中
-    model.policy.load_state_dict(policy.state_dict(), strict=False)
+    model.policy.load_state_dict(ppo_policy.state_dict(), strict=False)
 
     # 6. TensorBoard 记录器
     new_logger = configure(log_dir, ["stdout", "tensorboard"])
@@ -95,48 +98,61 @@ def main_gru(
 
 
 def main_mlp(
-    num_envs=8,
+    num_envs=1,
     total_steps=2_000_000,
     rollout_len=2048,
     log_dir="./train/result/mlp_tensorboard",
     model_path="./trained_model/imitation_shoot/mlp_imitation_policy.pt",
     save_dir="./trained_model/ppo_from_mlp",
-    log_file="./train/result/train_shoot_back3.log"
+    log_file="./train/result/train_shoot_back_mlp.log"
 ):
     os.makedirs(save_dir, exist_ok=True)
 
-    # 1. 并行环境初始化 + 监控包装
+    # 1. 多环境创建与封装
     vec_env = SubprocVecEnv([lambda i=i: make_env(i, log_file) for i in range(num_envs)])
     vec_env = VecMonitor(vec_env)
 
-    # 2. 确定 observation_space（SB3 所需）
+    # 2. 构建 observation_space
     obs_shape = vec_env.observation_space.shape
     observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=obs_shape, dtype=np.float32)
 
-    # 3. 加载模仿模型
-    imitation_model = MLPPolicy(obs_dim=obs_shape[0], act_dim=2)  # 根据动作维度修改
+    # 3. 加载模仿学习模型
+    imitation_model = MLPPolicy(obs_dim=obs_shape[0], act_dim=4)
     imitation_model.load_state_dict(torch.load(model_path))
 
-    # 4. 创建 PPOPolicy 并迁移 feature_extractor + actor
-    policy = PPOMLPPolicy(observation_space=observation_space, action_dim=2)
-    policy.feature_extractor.load_state_dict(imitation_model.feature_extractor.state_dict())
-    policy.actor.load_state_dict(imitation_model.actor.state_dict())
+    # 4. 构建 PPO 策略并迁移权重
+    # 构造必要参数
+    policy_kwargs = dict()
+    ppo_policy = PPOMLPPolicy(
+        observation_space=vec_env.observation_space,
+        action_space=vec_env.action_space,
+        lr_schedule=get_schedule_fn(3e-4),  # PPO 默认学习率
+        **policy_kwargs
+    )
 
-    # 5. 构造 SB3 PPO 模型
+    with torch.no_grad():
+        for p_tgt, p_src in zip(ppo_policy.feature_extractor.parameters(),
+                                imitation_model.feature_extractor.parameters()):
+            p_tgt.copy_(p_src)
+
+        for p_tgt, p_src in zip(ppo_policy.actor.parameters(),
+                                imitation_model.actor.parameters()):
+            p_tgt.copy_(p_src)
+
+    # 5. 创建 SB3 的 PPO 模型
     model = PPO(
         policy=PPOMLPPolicy,
         env=vec_env,
         verbose=1,
         tensorboard_log=log_dir,
-        policy_kwargs={"observation_space": observation_space, "action_dim": 2},
+        policy_kwargs=policy_kwargs,
     )
-    model.policy.load_state_dict(policy.state_dict(), strict=False)
+    model.policy.load_state_dict(ppo_policy.state_dict(), strict=False)
 
-    # 6. TensorBoard 日志配置
+    # 6. 配置 Logger 和 Callback
     new_logger = configure(log_dir, ["stdout", "tensorboard"])
     model.set_logger(new_logger)
 
-    # 7. Checkpoint 保存回调
     checkpoint_callback = CheckpointCallback(
         save_freq=rollout_len * num_envs * 10,
         save_path=save_dir,
@@ -145,20 +161,19 @@ def main_mlp(
         save_vecnormalize=False,
     )
 
-    # 8. 开始训练
+    # 7. 启动训练
     model.learn(
         total_timesteps=total_steps,
         callback=checkpoint_callback
     )
 
-    # 9. 保存最终模型
-    final_model_path = os.path.join(save_dir, "ppo_mlp_final.zip")
-    model.save(final_model_path)
-    print(f"✅ PPO-MLP 强化训练完成，模型已保存至: {final_model_path}")
+    final_path = os.path.join(save_dir, "ppo_mlp_final.zip")
+    model.save(final_path)
+    print(f"✅ PPO-MLP 强化训练完成，模型已保存到: {final_path}")
 
 
 if __name__ == "__main__":
-    main_gru()
+    main_mlp()
 
     # num_envs = 8
     # log_file = "./train/result/train_shoot_back3.log"

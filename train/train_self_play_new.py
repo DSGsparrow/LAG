@@ -12,7 +12,7 @@ import argparse
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.callbacks import CheckpointCallback
 
-from env_factory.env_factory_selfplay import make_env
+from env_factory.env_factory_selfplay import make_env, make_normal_env
 
 
 def parse_args():
@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument("--warmup_action", nargs='+', type=float, default=[1, 2, 1, 0.0, 0.0])
 
     # 多线程
-    parser.add_argument("--num_envs", type=int, default=16)
+    parser.add_argument("--num_envs", type=int, default=1)
 
     # 训练参数
     parser.add_argument("--total_timesteps", type=int, default=5_000_00)
@@ -67,7 +67,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main_self_play():
     args = parse_args()
     os.makedirs(args.model_dir, exist_ok=True)
 
@@ -143,8 +143,64 @@ def main():
         print(f"[INFO] Loaded opponent model from {opponent_path}")
 
 
+def main_shoot_static():
+    args = parse_args()
+    os.makedirs(args.model_dir, exist_ok=True)
+
+    # 创建多环境
+    env_fns = [lambda env_id=i: make_normal_env(env_id, args) for i in range(args.num_envs)]
+    env = SubprocVecEnv(env_fns)
+
+    # 创建 Checkpoint 回调：每隔 save_interval 步保存一次模型
+    checkpoint_callback = CheckpointCallback(
+        save_freq=args.save_interval,
+        save_path=args.model_dir,
+        name_prefix="ppo_model"
+    )
+
+    # 加载或新建模型
+    if os.path.exists(args.model_path):
+        print("✅ 加载已有模型继续训练...")
+        model = PPO.load(
+            args.model_path,
+            env=env,
+            tensorboard_log=args.tb_log,
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        )
+    else:
+        print("🆕 没有旧模型，创建新 PPO 模型")
+        model = PPO(
+            "MlpPolicy",
+            env,
+            learning_rate=args.learning_rate,
+            n_steps=args.n_steps,
+            batch_size=args.batch_size,
+            n_epochs=args.n_epochs,
+            gamma=args.gamma,
+            gae_lambda=args.gae_lambda,
+            clip_range=args.clip_range,
+            ent_coef=args.ent_coef,
+            verbose=1,
+            tensorboard_log=args.tb_log,
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        )
+
+    # 训练一次性完成 + 自动保存
+    model.learn(
+        total_timesteps=args.total_timesteps,
+        callback=checkpoint_callback,
+        tb_log_name="ppo_run"
+    )
+
+    # 最后再保存一次模型
+    final_model_path = os.path.join(args.model_dir, "final_model.zip")
+    model.save(final_model_path)
+    print(f"✅ 最终模型已保存到 {final_model_path}")
+
+
+
 if __name__ == "__main__":
-    main()
+    main_shoot_static()
 
 
 

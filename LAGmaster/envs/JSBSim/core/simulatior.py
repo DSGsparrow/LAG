@@ -122,6 +122,8 @@ class AircraftSimulator(BaseSimulator):
             if key == 'num_missiles':
                 self.num_missiles = value  # type: int
                 self.num_left_missiles = self.num_missiles  # type: int
+            if key == 'static_mode':
+                self.static_mode = value  # type: bool
         # fixed simulator links
         self.partners = []  # type: List[AircraftSimulator]
         self.enemies = []   # type: List[AircraftSimulator]
@@ -220,6 +222,8 @@ class AircraftSimulator(BaseSimulator):
         if self.is_alive:
             if self.bloods <= 0:
                 self.shotdown()
+            if self.static_mode:
+                return True
             result = self.jsbsim_exec.run()
             if not result:
                 raise RuntimeError("JSBSim failed.")

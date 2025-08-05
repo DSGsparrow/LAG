@@ -19,7 +19,7 @@ def main_gru():
     lr = 1e-3
     patience = 10
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    save_path = "gru_imitation_policy.pt"
+    save_path = "trained_model/imitation_shoot/gru_imitation_policy.pt"
 
     # === 加载数据集并划分训练/验证集 ===
     dataset = SequenceExpertDataset(root_dir, window_size=window_size, stride=1)
@@ -146,4 +146,4 @@ def main_mlp():
 
 
 if __name__ == '__main__':
-    main_mlp()
+    main_gru()

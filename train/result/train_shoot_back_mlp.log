@@ -1,0 +1,14 @@
+2025-07-19 22:03:32,745 - INFO [ENV 1] - Logger for ENV 1 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:03:32,745 - INFO [ENV 4] - Logger for ENV 4 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:03:32,783 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:03:32,802 - INFO [ENV 7] - Logger for ENV 7 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:03:32,818 - INFO [ENV 6] - Logger for ENV 6 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:03:32,829 - INFO [ENV 2] - Logger for ENV 2 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:03:32,846 - INFO [ENV 5] - Logger for ENV 5 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:03:32,866 - INFO [ENV 3] - Logger for ENV 3 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:04:08,010 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:04:41,391 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:05:49,236 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:09:03,807 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:10:29,467 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back_mlp.log
+2025-07-19 22:16:41,621 - INFO [ENV 0] - Logger for ENV 0 initialized, log path: ./train/result/train_shoot_back_mlp.log

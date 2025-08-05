@@ -2,7 +2,7 @@
 task: hierarchical_singlecombat_shoot_back
 
 # file path
-render_path: "./render_train/shoot_back3"
+render_path: "./render_train/shoot_static"
 state_path: "./test_result/result/states_imi_dodge2.jsonl"
 
 # shoot area
@@ -39,7 +39,8 @@ aircraft_configs: {
       ic_psi_true_deg: 0,
       ic_u_fps: 800.0,
     },
-    missile: 2
+    missile: 1,
+    static_mode: False
   },
   B0100: {
     color: Blue,
@@ -52,6 +53,7 @@ aircraft_configs: {
       ic_u_fps: 800.0,
     },
     missile: 0,
+    static_mode: True,
   }
 }
 

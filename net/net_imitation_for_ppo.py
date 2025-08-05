@@ -34,7 +34,7 @@ class GRULayer(nn.Module):
         return out[:, -1]  # 取最后一个隐藏状态作为整体序列表示
 
 class PPOGRUPolicy(BaseFeaturesExtractor):
-    def __init__(self, observation_space: spaces.Box, action_dim: int = 2, hidden_dim: int = 128):
+    def __init__(self, observation_space: spaces.Box, action_dim: int = 4, hidden_dim: int = 128):
         super().__init__(observation_space, features_dim=hidden_dim)
         input_dim = observation_space.shape[-1]  # 单帧状态维度
 
@@ -77,9 +77,20 @@ class PPOGRUPolicy(BaseFeaturesExtractor):
 
 
 class PPOMLPPolicy(BaseFeaturesExtractor):
-    def __init__(self, observation_space: spaces.Box, action_dim: int = 2, hidden_dim: int = 128):
-        super().__init__(observation_space, features_dim=hidden_dim)
+    def __init__(
+        self,
+        observation_space,
+        action_space,
+        lr_schedule=None,
+        net_arch=None,
+        activation_fn=None,
+        *args,
+        **kwargs
+    ):
+        super().__init__(observation_space, features_dim=128)
         obs_dim = observation_space.shape[0]
+        action_dim = action_space.shape[0] if action_space is not None else 4
+        hidden_dim = 128  # 可从 kwargs 中提取自定义值
 
         self.feature_extractor = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
@@ -90,10 +101,7 @@ class PPOMLPPolicy(BaseFeaturesExtractor):
             nn.LayerNorm(hidden_dim),
         )
 
-        # 模仿学习 actor 部分将从预训练加载
         self.actor = nn.Linear(hidden_dim, action_dim)
-
-        # critic 和 log_std 由 PPO 强化训练
         self.critic = nn.Linear(hidden_dim, 1)
         self.log_std = nn.Parameter(torch.zeros(action_dim))
 
