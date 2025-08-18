@@ -1,70 +1,45 @@
+# Re-plot with distance_bin_km = 0.5 km
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import cm, colors
-from matplotlib.colors import LightSource
 
-# ---- parameters ----
-w_R = 0.6
-w_AO = 0.4
-R_thr_km = 20.0
-p30 = 0.1  # f_R(30km)=p30
+hit_reward = 1.0
+miss_base_penalty = -0.75
+miss_bonus_max = 1.5
 
-# ---- definitions ----
-def g_AO(AO):
-    """AO in radians -> [0,1]"""
-    return 0.5 * (1.0 + np.cos(AO))
+distance_mid_km = 7.0
+distance_steep_km = 1.2
+distance_bin_km = 0.5  # updated as requested
 
-def f_R_logistic(R_km, R_thr_km=20.0, p30=0.1):
-    """logistic distance reward"""
-    beta = np.log((1 - p30) / p30) / (30.0 - R_thr_km)
-    return 1.0 / (1.0 + np.exp(beta * (R_km - R_thr_km)))
+def logistic01(d_km, mid_km, steep_km):
+    return 1.0 / (1.0 + np.exp((d_km - mid_km) / max(1e-6, steep_km)))
 
-def phi(R_km, AO_rad):
-    return w_R * f_R_logistic(R_km, R_thr_km=R_thr_km, p30=p30) + w_AO * g_AO(AO_rad)
+def reward_fn(d_m, quantized=False):
+    d_km = d_m / 1000.0
+    if d_km <= 0.3:
+        return hit_reward
+    if quantized:
+        d_km = np.round(d_km / distance_bin_km) * distance_bin_km
+    shape = logistic01(d_km, distance_mid_km, distance_steep_km)
+    return miss_base_penalty + miss_bonus_max * shape
 
-# ---- grid ----
-R_vals = np.linspace(0, 35, 220)     # km
-AO_vals = np.linspace(0, np.pi, 180) # rad
-R_grid, AO_grid = np.meshgrid(R_vals, AO_vals)
-Phi = phi(R_grid, AO_grid)
+d_m = np.linspace(0, 15000, 2000)
+r_cont = np.array([reward_fn(x, quantized=False) for x in d_m])
+r_quant = np.array([reward_fn(x, quantized=True) for x in d_m])
 
-# ---- colormap + lighting ----
-cmap = cm.plasma  # vibrant gradient
-norm = colors.Normalize(vmin=Phi.min(), vmax=Phi.max())
-ls = LightSource(azdeg=315, altdeg=45)
-shaded_rgb = ls.shade(Phi, cmap=cmap, norm=norm, vert_exag=0.8, blend_mode='soft')
+plt.figure(figsize=(8,5))
+plt.plot(d_m/1000.0, r_cont, label='Continuous', linewidth=2)
+plt.plot(d_m/1000.0, r_quant, linestyle='solid', label=f'Binned ({distance_bin_km:.1f} km)', linewidth=2)
+plt.axvline(x=0.3, linestyle=':', linewidth=1.5)
+plt.text(0.31, hit_reward-0.05, 'Hit @ 0.3 km', fontsize=9, va='top')
 
-# ---- 3D surface ----
-fig = plt.figure(figsize=(10,7))
-ax = fig.add_subplot(111, projection='3d')
-
-surf = ax.plot_surface(
-    R_grid, AO_grid * 180/np.pi, Phi,
-    facecolors=shaded_rgb,
-    rstride=2, cstride=2, antialiased=True, linewidth=0
-)
-
-# ground contour for extra "depth" effect
-ax.contour(
-    R_grid, AO_grid * 180/np.pi, Phi,
-    zdir='z', offset=Phi.min() - 0.05, levels=18, cmap=cmap, linewidths=0.6
-)
-
-# labels and view
-ax.set_xlabel("Distance R (km)")
-ax.set_ylabel("AO (degrees)")
-ax.set_zlabel("Φ")
-ax.set_title("Stylized 3D Surface of Φ(R, AO)")
-
-# colorbar mapped to Phi
-mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
-mappable.set_array(Phi)
-fig.colorbar(mappable, ax=ax, shrink=0.7, pad=0.08, label="Φ")
-
-ax.view_init(elev=30, azim=-55)
+plt.title('Reward vs Final Miss Distance (hit if ≤ 0.3 km)')
+plt.xlabel('Final distance d (km)')
+plt.ylabel('Reward R(d)')
+plt.grid(True, linestyle=':')
+plt.legend()
 plt.tight_layout()
-out_path = "/mnt/data/phi_surface_cool.png"
-# plt.savefig(out_path, dpi=180)
-plt.show()
 
+out_path = '/mnt/data/reward_curve_300m_logistic_bin0p5.png'
+plt.show()
+# plt.savefig(out_path, dpi=180)
 # out_path
