@@ -22,12 +22,12 @@ def parse_args():
     parser.add_argument("--target_state", type=int, default=0)
 
     # 基本路径
-    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_static2.log")
+    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_static3.log")
     parser.add_argument("--model_path", type=str, default="")
     parser.add_argument("--pretrained_pt_path", type=str, default="")
-    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_static2/checkpoints/")
-    parser.add_argument("--tb_log", type=str, default="./ppo_air_combat_sp_tb2/")
-    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_static2")
+    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_static3/checkpoints/")
+    parser.add_argument("--tb_log", type=str, default="./ppo_air_combat_sp_tb/")
+    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_static3")
     parser.add_argument("--model_dir", type=str, default="./model_pool/shoot_static")
 
     # 模型路径

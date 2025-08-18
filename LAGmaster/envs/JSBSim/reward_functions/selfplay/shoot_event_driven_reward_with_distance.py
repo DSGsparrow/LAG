@@ -11,20 +11,37 @@ class SelfPlayShootMissileRewardWithDistance(BaseRewardFunction):
     - 距离奖励采用 logistic 形状，并对距离做分箱以减小抖动
     """
 
+    # ---------- 小工具：统一读取 config ----------
+    def _cfg(self, key: str, default):
+        """
+        读取优先级：
+        1) getattr(config, f'{ClassName}_{key}')
+        2) getattr(config, key)
+        都没有则使用 default
+        """
+        prefixed = getattr(self.config, f'{self.__class__.__name__}_{key}', None)
+        if prefixed is not None:
+            return prefixed
+        plain = getattr(self.config, key, None)
+        return default if plain is None else plain
+
     def __init__(self, config):
         super().__init__(config)
-        # ---- 可调参数（都给默认值，拿不到 config 时也能跑）----
-        # 训练早期距离常在 6~8 km，mid 设在 7 km，steep 适当放缓以减少对小抖动的敏感度
-        self.hit_reward = config.get("hit_reward", 1.0)
-        self.miss_base_penalty = config.get("miss_base_penalty", -0.75)
-        self.miss_bonus_max = config.get("miss_bonus_max", 0.75)   # 未命中最多补到 +0.75
 
-        # logistic 距离 shaping 参数
-        self.distance_mid_km = config.get("distance_mid_km", 7.0)   # R=0.5 的中点（建议 6.5~8 之间调）
-        self.distance_steep_km = config.get("distance_steep_km", 1.2)  # 越大越平滑（建议 0.8~2.0）
+        # 命中与未命中参数
+        self.hit_reward = self._cfg("hit_reward", 1.0)
+        self.miss_base_penalty = self._cfg("miss_base_penalty", -0.75)
+        self.miss_bonus_max = self._cfg("miss_bonus_max", 1.5)
 
-        # 距离分箱（量化）步长，抑制小幅波动（例如雷达/仿真噪声）
-        self.distance_bin_km = config.get("distance_bin_km", 0.3)   # 200 m 一档（可调 0.1~0.5）
+        # “判定命中”的距离阈值（公里），默认 0.3 km（300 m）
+        self.hit_distance_km = self._cfg("hit_distance_km", 0.3)
+
+        # logistic 距离塑形参数
+        self.distance_mid_km = self._cfg("distance_mid_km", 7.0)  # R=0.5 的中点
+        self.distance_steep_km = self._cfg("distance_steep_km", 1.2)  # 越大越平滑
+
+        # 距离分箱（量化）步长，抑制小幅波动（km）
+        self.distance_bin_km = self._cfg("distance_bin_km", 0.5)  # 0.5 km 一档
 
     def reset(self, task, env):
         return super().reset(task, env)
@@ -49,7 +66,7 @@ class SelfPlayShootMissileRewardWithDistance(BaseRewardFunction):
                 # 命中：给定高奖励
                 r = self.hit_reward
                 reward += r
-                logging.debug(f"[HIT] +{r:.3f}")
+                logging.info(f"[HIT] +{r:.3f}")
                 continue
 
             if missile.is_miss:
@@ -81,7 +98,7 @@ class SelfPlayShootMissileRewardWithDistance(BaseRewardFunction):
                 r = base_penalty + add
                 reward += r
 
-                logging.debug(
+                logging.info(
                     f"[MISS] d={d_m:.1f} m (~{d_km_q:.2f} km binned), "
                     f"shape={shape:.3f}, add={add:.3f}, miss_r={r:.3f}"
                 )
