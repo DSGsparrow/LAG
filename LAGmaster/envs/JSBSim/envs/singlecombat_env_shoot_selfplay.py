@@ -121,6 +121,8 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
         self.episode_counter = 0
         self.success_queue = deque(maxlen=100)  # 最近100局命中情况
 
+        self.launch_distance = 0
+
     def load_task(self):
         taskname = getattr(self.config, 'task', None)
         if taskname == 'singlecombat':
@@ -151,15 +153,20 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
 
     def set_random_enemy(self):
         """设置当前敌机信息"""
-        init_ego_alt = self.np_random.uniform(6000., 10000.)
-        init_ego_speed = self.np_random.uniform(250., 360.)
-        init_enm_alt = self.np_random.uniform(6000., 10000.)
-        init_enm_speed = self.np_random.uniform(250., 360.)
-        init_enm_heading = self.np_random.uniform(0., 360.)
+        # init_ego_alt = self.np_random.uniform(6000., 10000.)
+        # init_ego_speed = self.np_random.uniform(250., 360.)
+        # init_enm_alt = self.np_random.uniform(6000., 10000.)
+        # init_enm_speed = self.np_random.uniform(250., 360.)
+        # init_enm_heading = self.np_random.uniform(0., 360.)
+        # init_enm_distance = self.np_random.uniform(15000., 20000.)
+        # init_enm_angle = self.np_random.uniform(75., 285.)
+
+        init_ego_alt = 8000
+        init_ego_speed = 300
+        init_enm_alt = 8000
+        init_enm_speed = 300
         init_enm_heading = 90
-        init_enm_distance = self.np_random.uniform(15000., 20000.)
         init_enm_distance = 30000
-        init_enm_angle = self.np_random.uniform(75., 285.)
         init_enm_angle = 0
 
         init_ego_alt = init_ego_alt / 0.304
@@ -197,6 +204,7 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
         obs = self.get_obs()
         self._create_records = False
         self.render_file = get_unique_filename(self.env_id, 'baseline_dodge', self.render_path)
+        self.launch_distance = 0
         return self._pack(obs)
 
     def reset_simulators(self, enemy):
@@ -259,14 +267,15 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
                 sim.run()
         self.task.step(self)
 
+        obs = self.get_obs()
+
         for agent_id in self.agents.keys():
             if self.task.launch[agent_id]:
                 if agent_id == "A0100":
                     info['launch'] = True
+                    self.launch_distance = obs['A0100'][13] * 10000
                 else:
                     info['opponent_launch'] = True
-
-        obs = self.get_obs()
 
         dones = {}
         for agent_id in self.agents.keys():
@@ -328,6 +337,7 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
 
             self.tb_writer.add_scalar("shoot success", float(shoot_success), self.tb_step)
             self.tb_writer.add_scalar("episode_reward", self.cumulative_reward, self.tb_step)
+            self.tb_writer.add_scalar("launch_distance", self.launch_distance, self.tb_step)
 
             self.success_queue.append(int(shoot_success))
             win_rate = sum(self.success_queue) / len(self.success_queue)

@@ -5,134 +5,83 @@ from envs.JSBSim.utils.utils import get_AO_TA_R
 
 class SelfPlayPostureReward(BaseRewardFunction):
     """
-    PostureReward = Orientation * Range
-    - Orientation: Encourage pointing at enemy fighter, punish when is pointed at.
-    - Range: Encourage getting closer to enemy fighter, punish if too far away.
+    Φ(s) = w_R * f_R(R_km) + w_AO * g_AO(AO)
+      - g_AO(AO) = (1 + cos(AO)) / 2 ∈ [0, 1]（AO 越小越好）
+      - f_R(R)   = 1 / (1 + exp(beta * (R_km - R_thr_km)))
+                   其中 beta 由 f_R(30 km) = p30 反解：beta = ln((1-p30)/p30) / (30 - R_thr_km)
 
-    NOTE:
-    - Only support one-to-one environments.
+    注意：
+      - 本函数返回“当前势能值 Φ(s)”，不是即时奖励。
+      - 即时奖励可在外部用差分：r_t = Φ(s_t) - Φ(s_{t-1})
+      - 多敌机：取势能最大的那个（避免因敌机数量放大势能）
     """
+
     def __init__(self, config):
         super().__init__(config)
-        self.orientation_version = getattr(self.config, f'{self.__class__.__name__}_orientation_version', 'v2')
-        self.range_version = getattr(self.config, f'{self.__class__.__name__}_range_version', 'v3')
-        self.target_dist = getattr(self.config, f'{self.__class__.__name__}_target_dist', 3.0)
+        # 角度/距离权重
+        self.w_R  = float(getattr(config, 'SelfPlayPosturePotential_w_R', 0.7))
+        self.w_AO = float(getattr(config, 'SelfPlayPosturePotential_w_AO', 0.3))
 
-        self.orientation_fn = self.get_orientation_function(self.orientation_version)
-        self.range_fn = self.get_range_funtion(self.range_version)
-        self.reward_item_names = [self.__class__.__name__ + item for item in ['', '_orn', '_range']]
+        # logistic 参数：20km 为中点；指定 30km 处的目标值 p30（越小→远距斜率越大→更强靠近驱动力）
+        self.R_thr_km = float(getattr(config, 'SelfPlayPosturePotential_R_thr_km', 20.0))
+        self.p30      = float(getattr(config, 'SelfPlayPosturePotential_p30', 0.1))
 
+        # 记录项（用于你原框架里的可视化/日志）
+        self.reward_item_names = [
+            self.__class__.__name__,
+            f'{self.__class__.__name__}_angle',
+            f'{self.__class__.__name__}_range'
+        ]
+
+    # ---- 势能项：角度 ----
+    @staticmethod
+    def g_AO(AO: float) -> float:
+        """AO ∈ [0, π]，AO 越小越好；返回 [0,1]."""
+        return 0.5 * (1.0 + np.cos(AO))
+
+    # ---- 势能项：距离（logistic）----
+    def _beta_from_p30(self) -> float:
+        """由 f_R(30 km)=p30 反解 logistic 斜率 beta；中点在 R_thr_km。"""
+        p = float(np.clip(self.p30, 1e-6, 1 - 1e-6))
+        denom = max(30.0 - self.R_thr_km, 1e-6)
+        return np.log((1 - p) / p) / denom
+
+    def f_R(self, R_km: float) -> float:
+        """logistic 距离项：R 越小越接近 1；20–30 km 区间有较大斜率以提供靠近驱动力。"""
+        beta = self._beta_from_p30()
+        return 1.0 / (1.0 + np.exp(beta * (R_km - self.R_thr_km)))
+
+    # ---- 主接口：返回当前势能 Φ(s) ----
     def get_reward(self, task, env, agent_id):
         """
-        Reward is a complex function of AO, TA and R in the last timestep.
-
-        Args:
-            task: task instance
-            env: environment instance
-
-        Returns:
-            (float): reward
+        返回当前势能 Φ(s)；外部若做 shaping，请自己缓存上一步 Φ 做差分。
         """
-        new_reward = 0
+        ego = env.agents[agent_id]
+        ego_feature = np.hstack([ego.get_position(), ego.get_velocity()])
 
-        # if env.agents[agent_id].check_missile_warning or env.agents[agent_id].check_missile_launching:
-        #     new_reward = 0
-        #     orientation_reward = 0
-        #     range_reward = 0
-        #
-        # else:
-        # feature: (north, east, down, vn, ve, vd)
-        ego_feature = np.hstack([env.agents[agent_id].get_position(),
-                                 env.agents[agent_id].get_velocity()])
-        # x = env.agents[agent_id].enemies[0].get_position()
-        # v = env.agents[agent_id].enemies[0].get_velocity()
-        # missile_num = task.remaining_missiles[agent_id]
-        for enm in env.agents[agent_id].enemies:
-            enm_feature = np.hstack([enm.get_position(),
-                                     enm.get_velocity()])
-            AO, TA, R = get_AO_TA_R(ego_feature, enm_feature)
-            orientation_reward = self.orientation_fn(AO, TA)
-            range_reward = self.range_fn(R / 1000)
-            new_reward += orientation_reward * range_reward
+        best_phi = 0.0
+        best_angle_term = 0.0
+        best_range_term = 0.0
 
-        return self._process(new_reward, agent_id, (orientation_reward, range_reward))
+        enemies = getattr(ego, 'enemies', [])
+        if not enemies:
+            # 无目标时，返回 0（也可返回上一次的 Φ 或一个基线）
+            return self._process(0.0, agent_id, (0.0, 0.0))
 
-    def tactical_angle_reward(self, AO, TA):
-        my_angle = AO / np.pi * 180
-        enemy_angle = 180 - TA / np.pi * 180
+        for enm in enemies:
+            enm_feature = np.hstack([enm.get_position(), enm.get_velocity()])
+            AO, _, R_m = get_AO_TA_R(ego_feature, enm_feature)  # TA 不用
+            R_km = float(R_m) / 1000.0
 
-        # 归一化角度到 [0, 1]，0 表示完全对准，1 表示完全偏离
-        my_norm = np.clip(my_angle / 30.0, 0, 1)
-        enemy_norm = np.clip(enemy_angle / 30.0, 0, 1)
+            angle_term = self.g_AO(AO)    # [0,1]
+            range_term = self.f_R(R_km)   # (0,1)
 
-        if my_angle < 30 <= enemy_angle:
-            # ✅ 优势态势
-            # 奖励范围：1.2 ~ 1.5（越准越高，敌人越偏越好）
-            reward = 1.5 - 0.3 * my_norm + 0.1 * enemy_norm
-            return reward
+            phi = self.w_AO * angle_term + self.w_R * range_term
 
-        elif my_angle < 30 and enemy_angle < 30:
-            # ⚖️ 均势态势
-            # 奖励范围：0.8 ~ 1.1
-            reward = 1.1 - 0.3 * my_norm - 0.3 * (1 - enemy_norm)
-            return reward
+            if phi > best_phi:
+                best_phi = phi
+                best_angle_term = angle_term
+                best_range_term = range_term
 
-        elif my_angle >= 30 and enemy_angle >= 30:
-            # 💤 双方都没对准
-            # 奖励范围：0.4 ~ 0.7（轻微鼓励我朝敌人方向转头）
-            reward = 0.4 + 0.3 * (1 - my_norm)
-            return reward
-
-        else:
-            # ❌ 劣势态势（我没看敌人，敌人对着我）
-            # 奖励范围：≤ 0.4
-            # 惩罚敌人越准惩罚越重，鼓励我开始对准
-            penalty = 0.6 * (1 - enemy_norm)
-            bonus = 0.2 * (1 - my_norm)
-            reward = 0.4 - penalty + bonus
-            return reward
-
-
-    def get_orientation_function(self, version):
-        if version == 'v0':
-            return lambda AO, TA: (1. - np.tanh(9 * (AO - np.pi / 9))) / 3. + 1 / 3. \
-                + min((np.arctanh(1. - max(2 * TA / np.pi, 1e-4))) / (2 * np.pi), 0.) + 0.5
-        elif version == 'v1':
-            return lambda AO, TA: (1. - np.tanh(2 * (AO - np.pi / 2))) / 2. \
-                * (np.arctanh(1. - max(2 * TA / np.pi, 1e-4))) / (2 * np.pi) + 0.5
-        elif version == 'v2':
-            return lambda AO, TA: 1 / (50 * AO / np.pi + 2) + 1 / 2 \
-                + min((np.arctanh(1. - max(2 * TA / np.pi, 1e-4))) / (2 * np.pi), 0.) + 0.5
-        elif version == 'v3':
-            return lambda AO, TA: self.tactical_angle_reward(AO, TA)
-        else:
-            raise NotImplementedError(f"Unknown orientation function version: {version}")
-
-    def distance_reward(self, R, missile_num):
-        # r = distance / 1000
-        r6 = 0.6  # 奖励在6公里处
-        k = 1.5  # 控制远距离惩罚曲线陡度（>1确保梯度递增）
-        a = 0.07  # 远距离惩罚幅度
-        if missile_num > 0:
-            return 1 * (R < 5) + (R >= 5) * np.clip(-0.032 * R**2 + 0.284 * R + 0.38, 0, 1) + np.clip(np.exp(-0.16 * R), 0, 0.2)
-        else:
-            if R < 2:
-                return 1.0
-            elif R <= 6:
-                return ((1.0 - r6) / (6 - 2)) * (6 - R) + r6
-            else:
-                return max(-a * (R - 6) ** k + r6, -1.5)
-
-    def get_range_funtion(self, version):
-        if version == 'v0':
-            return lambda R: np.exp(-(R - self.target_dist) ** 2 * 0.004) / (1. + np.exp(-(R - self.target_dist + 2) * 2))
-        elif version == 'v1':
-            return lambda R: np.clip(1.2 * np.min([np.exp(-(R - self.target_dist) * 0.21), 1]) /
-                                     (1. + np.exp(-(R - self.target_dist + 1) * 0.8)), 0.3, 1)
-        elif version == 'v2':
-            return lambda R: max(np.clip(1.2 * np.min([np.exp(-(R - self.target_dist) * 0.21), 1]) /
-                                         (1. + np.exp(-(R - self.target_dist + 1) * 0.8)), 0.3, 1), np.sign(7 - R))
-        elif version == 'v3':
-            return lambda R: 1 * (R < 5) + (R >= 5) * np.clip(-0.032 * R**2 + 0.284 * R + 0.38, 0, 1) + np.clip(np.exp(-0.16 * R), 0, 0.2)
-        else:
-            raise NotImplementedError(f"Unknown range function version: {version}")
+        # 返回势能与两个分量（便于你在日志里看分解）
+        return self._process(best_phi, agent_id, (best_angle_term, best_range_term))

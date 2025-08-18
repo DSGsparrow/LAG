@@ -3,6 +3,7 @@ import json
 import random
 import numpy as np
 import torch
+import torch.nn as nn
 
 from stable_baselines3 import PPO
 from typing import List, Dict, Optional
@@ -21,12 +22,12 @@ def parse_args():
     parser.add_argument("--target_state", type=int, default=0)
 
     # 基本路径
-    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_static.log")
+    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_static2.log")
     parser.add_argument("--model_path", type=str, default="")
     parser.add_argument("--pretrained_pt_path", type=str, default="")
-    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_static/checkpoints/")
+    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_static2/checkpoints/")
     parser.add_argument("--tb_log", type=str, default="./ppo_air_combat_sp_tb2/")
-    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_static")
+    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_static2")
     parser.add_argument("--model_dir", type=str, default="./model_pool/shoot_static")
 
     # 模型路径
@@ -157,6 +158,12 @@ def main_shoot_static():
         name_prefix="ppo_model"
     )
 
+    # ✅ 自定义网络结构：更深更宽的 MLP
+    policy_kwargs = dict(
+        net_arch=[dict(pi=[256, 256, 128], vf=[256, 256, 128])],
+        activation_fn=nn.ReLU
+    )
+
     # 加载或新建模型
     if os.path.exists(args.model_path):
         print("✅ 加载已有模型继续训练...")
@@ -181,7 +188,8 @@ def main_shoot_static():
             ent_coef=args.ent_coef,
             verbose=1,
             tensorboard_log=args.tb_log,
-            device="cuda" if torch.cuda.is_available() else "cpu"
+            device="cuda" if torch.cuda.is_available() else "cpu",
+            policy_kwargs=policy_kwargs  # ✅ 设置更大网络
         )
 
     # 训练一次性完成 + 自动保存
