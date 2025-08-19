@@ -24,18 +24,21 @@ class SelfPlayShootWaitReward(BaseRewardFunction):
         step = env.current_step
         # 加上小于20步主要是为了防止回合结束弹失效时，突然又来了个奖励
 
-        if not (a or b) and step <= 30:
-            obs = env.get_obs()[agent_id]
-            distance = obs[13] * 10000  # 单位: 米
+        # if not (a or b) and step <= 30:
+        #     obs = env.get_obs()[agent_id]
+        #     distance = obs[13] * 10000  # 单位: 米
+        #
+        #     # 线性奖励计算
+        #     if distance <= self.max_reward_distance:
+        #         reward = 1.0
+        #     elif distance >= self.min_reward_distance:
+        #         reward = 0.0
+        #     else:
+        #         # 线性插值
+        #         reward = (self.min_reward_distance - distance) / (self.min_reward_distance - self.max_reward_distance)
 
-            # 线性奖励计算
-            if distance <= self.max_reward_distance:
-                reward = 1.0
-            elif distance >= self.min_reward_distance:
-                reward = 0.0
-            else:
-                # 线性插值
-                reward = (self.min_reward_distance - distance) / (self.min_reward_distance - self.max_reward_distance)
+        if b:
+            reward = -1
 
         return self._process(reward, agent_id)
 

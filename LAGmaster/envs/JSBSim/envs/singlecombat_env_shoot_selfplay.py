@@ -15,7 +15,8 @@ from utils.init_state import my_aircraft, calculate_enemy_position
 from .env_base import BaseEnv
 from ..tasks import SingleCombatTask, SingleCombatDodgeMissileTask, HierarchicalSingleCombatDodgeMissileTask, \
     HierarchicalSingleCombatShootTask, SingleCombatShootMissileTask, HierarchicalSingleCombatTask, \
-    SingleCombatShootMissileImitationTask, SingleCombatShootMissileBackTask, HierarchicalSingleCombatShootMissileBackTask
+    SingleCombatShootMissileImitationTask, SingleCombatShootMissileBackTask, HierarchicalSingleCombatShootMissileBackTask, \
+    HierarchicalSingleCombatShootMissileSoloTask
 from ..human_task.HumanSingleCombatTask import  HumanSingleCombatTask
 
 
@@ -145,6 +146,8 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
             self.task = SingleCombatShootMissileBackTask(self.config)
         elif taskname == 'hierarchical_singlecombat_shoot_back':
             self.task = HierarchicalSingleCombatShootMissileBackTask(self.config)
+        elif taskname == 'hierarchical_solo_shoot':
+            self.task = HierarchicalSingleCombatShootMissileSoloTask(self.config)
         else:
             raise NotImplementedError(f"Unknown taskname: {taskname}")
 
@@ -337,7 +340,11 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
 
             self.tb_writer.add_scalar("shoot success", float(shoot_success), self.tb_step)
             self.tb_writer.add_scalar("episode_reward", self.cumulative_reward, self.tb_step)
-            self.tb_writer.add_scalar("launch_distance", self.launch_distance, self.tb_step)
+            self.tb_writer.add_scalar("distance/launch_distance", self.launch_distance, self.tb_step)
+
+            missile = self.agents['A0100'].launch_missiles[0]
+            target_distance = float(getattr(missile, "target_distance", np.nan))
+            self.tb_writer.add_scalar("distance/target_distance", target_distance, self.tb_step)
 
             self.success_queue.append(int(shoot_success))
             win_rate = sum(self.success_queue) / len(self.success_queue)

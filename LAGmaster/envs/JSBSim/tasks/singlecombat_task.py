@@ -367,7 +367,7 @@ class PursueAgent(BaselineAgent):
         enm_x, enm_y, enm_z = sim.enemies[0].get_position()
         # delta altitude
         delta_altitude = enm_z - ego_z
-        delta_altitude = enm_z - ego_z + 500
+        # delta_altitude = enm_z - ego_z + 500
         # delta heading
         ego_v = np.linalg.norm([ego_vx, ego_vy])
         delta_x, delta_y = enm_x - ego_x, enm_y - ego_y
