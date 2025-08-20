@@ -2,7 +2,7 @@
 task: hierarchical_solo_shoot
 
 # file path
-render_path: "./render_train/shoot_static_solo2"
+render_path: "./render_train/shoot_static_solo3"
 state_path: "./test_result/result/states_imi_dodge2.jsonl"
 
 # shoot area

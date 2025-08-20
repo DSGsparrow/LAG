@@ -24,12 +24,12 @@ def parse_args():
     parser.add_argument("--target_state", type=int, default=0)
 
     # 基本路径
-    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_static_solo2.log")
-    parser.add_argument("--model_path", type=str, default="trained_model/shoot_static_solo/final_model.zip")
+    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_static_solo3.log")
+    parser.add_argument("--model_path", type=str, default="trained_model/shoot_static_solo2/final_model.zip")
     parser.add_argument("--pretrained_pt_path", type=str, default="")
-    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_static_solo2/checkpoints/")
+    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_static_solo3/checkpoints/")
     parser.add_argument("--tb_log", type=str, default="./ppo_air_combat_sp_tb/")
-    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_static_solo2")
+    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_static_solo3")
     parser.add_argument("--model_dir", type=str, default="./model_pool/shoot_static")
 
     # 模型路径
@@ -46,7 +46,7 @@ def parse_args():
     parser.add_argument("--warmup_action", nargs='+', type=float, default=[1, 2, 1, 0.0, 0.0])
 
     # 多线程
-    parser.add_argument("--num_envs", type=int, default=16)
+    parser.add_argument("--num_envs", type=int, default=1)
 
     # 训练参数
     parser.add_argument("--total_timesteps", type=int, default=5_000_000)
@@ -71,125 +71,146 @@ def parse_args():
 
 class HybridActionWrapper(gym.Wrapper):
     """
-    只训练“发射布尔值”，其余三维机动动作由预训练模型产出。
-    - 原始 env 的动作空间形如 MultiDiscrete([3,5,3,2]) 或 Box([...])：
-      * 取预训练模型输出的前三个分量作为机动控制
-      * 将当前可训练 PPO 输出的 0/1（或连续值阈值化）作为最后一维发射决策
-      * 合并为原环境需要的完整动作再 step
-    - 观测空间不变
-    - 本 wrapper 对外暴露的 action_space 为 Discrete(2)（仅发射 0/1）
+    只训练“发射布尔值”，前三维机动动作恒为 0。
+    若 action=1 且底层返回 info['launch']=True，则在内部 roll out 到回合结束，
+    将发射到结束间的累计奖励一次性返回给上层。
     """
-    def __init__(self, env, maneuver_model_path=MANEUVER_MODEL_PATH, use_gpu=False):
-        super().__init__(env)
-        # 加载预训练模型（仅推理用）
-        self.maneuver_model = PPO.load(
-            maneuver_model_path,
-            device=("cuda" if use_gpu and torch.cuda.is_available() else "cpu")
-        )
 
-        # 对外只训练“发射布尔值”
+    def __init__(self, env):
+        super().__init__(env)
+
+        # 对外：观测不变，只训练二元发射
         self.observation_space = env.observation_space
         self.action_space = spaces.Discrete(2)  # 0=不发射, 1=发射
 
-        # 保存上一时刻观测，供预训练模型预测机动动作
-        self._last_obs = None
-
-        # 记下底层动作类型（MultiDiscrete / Box），以便正确拼装
+        # 记录底层动作空间类型与维度
         self._is_multidiscrete = isinstance(env.action_space, spaces.MultiDiscrete)
         self._is_box = isinstance(env.action_space, spaces.Box)
 
-        # 检查原动作维度
         if self._is_multidiscrete:
             nvec = env.action_space.nvec
-            assert len(nvec) == 4, \
-                f"期望原始动作为4段，多离散维度为4，现在是 {len(nvec)}"
+            assert len(nvec) >= 4, f"期望底层动作≥4维，现在是 {len(nvec)}"
         elif self._is_box:
             assert env.action_space.shape[0] >= 4, \
-                f"期望原始连续动作至少4维，现在是 {env.action_space.shape}"
+                f"期望底层连续动作≥4维，现在是 {env.action_space.shape}"
         else:
-            raise TypeError(
-                "原环境动作空间既不是 MultiDiscrete 也不是 Box，"
-                "请确认原动作空间是否为 [3,5,3,2] 或等价的 Box。"
-            )
+            raise TypeError("底层动作空间既不是 MultiDiscrete 也不是 Box。")
+
+        self._last_obs = None
+
+    # ---------- 工具：构造底层动作（前三维 0，最后一维为 fire） ----------
+    def _build_action(self, fire_bool: int):
+        fire = int(fire_bool)
+
+        if self._is_multidiscrete:
+            # 多离散：前三维给 0，最后一维为 fire（若有>4维，余下置 0）
+            out = np.zeros_like(self.env.action_space.nvec, dtype=np.int64)
+            out[:3] = 0
+            out[3] = fire
+            # 保证合法范围
+            out = np.minimum(out, self.env.action_space.nvec - 1)
+            out = np.maximum(out, 0)
+            return out
+
+        elif self._is_box:
+            # 连续：前三维 0，最后一维 fire，其他维也置 0
+            out = np.zeros((self.env.action_space.shape[0],), dtype=np.float32)
+            out[:3] = 0.0
+            out[3] = float(fire)
+            return np.clip(out, self.env.action_space.low, self.env.action_space.high)
+
+        else:
+            raise RuntimeError("未知的动作空间类型。")
+
+    # ---------- 兼容 gym / gymnasium 的 done 拆分 ----------
+    @staticmethod
+    def _is_gymnasium_step_tuple(t):
+        # gymnasium: (obs, reward, terminated, truncated, info)
+        return isinstance(t, tuple) and len(t) == 5
 
     def reset(self, **kwargs):
-        obs = self.env.reset(**kwargs)
-        # gym 与 gymnasium 兼容：reset 可能返回 (obs, info)
-        if isinstance(obs, tuple) and len(obs) == 2:
-            self._last_obs, info = obs
-            return self._last_obs, info
-        else:
+        ret = self.env.reset(**kwargs)
+        if isinstance(ret, tuple) and len(ret) == 2:
+            obs, info = ret
             self._last_obs = obs
-            return self._last_obs
-
-    def _predict_maneuver(self, obs):
-        """用预训练模型预测完整动作，然后取前三维作为机动动作。"""
-        # stable-baselines3 的 predict 接受单步 obs
-        act, _ = self.maneuver_model.predict(obs, deterministic=True)
-
-        if isinstance(act, (list, tuple)):
-            act = np.array(act)
-
-        # 如果原模型输出是标量（不应发生），转成 1D
-        act = np.asarray(act).reshape(-1)
-
-        # 取前三维（机动）
-        maneuver = act[:3]
-        return maneuver
-
-    def _merge_action(self, maneuver, fire_bool):
-        """拼装完整的四段动作，匹配底层 env 的动作空间格式和 dtype。"""
-        fire = int(fire_bool)
-        if self._is_multidiscrete:
-            # 汇总为 [a0, a1, a2, fire]（整型）
-            full = np.array([int(maneuver[0]), int(maneuver[1]), int(maneuver[2]), fire], dtype=np.int64)
-            return full
-        elif self._is_box:
-            # 连续空间：将前三维原样、最后一维为 0/1（或按需要映射到连续区间）
-            full = np.zeros((self.env.action_space.shape[0],), dtype=np.float32)
-            full[:3] = np.asarray(maneuver, dtype=np.float32)
-            # 若最后一维 Box 有上下界，按需要将 fire 映射到该区间，这里直接写 0/1
-            full[3] = float(fire)
-            # 如果原 Box 还有更多维（>=4），保持其余维度为 0（或按需处理）
-            return np.clip(full, self.env.action_space.low, self.env.action_space.high)
+            return obs, info
         else:
-            raise RuntimeError("未知动作空间类型。")
+            self._last_obs = ret
+            return ret
 
     def step(self, action):
-        """
-        外部传入的 action 仅为发射布尔值（0 或 1）。
-        在此处组合为原环境需要的四段动作，调用底层 env.step。
-        """
+        # 上层只传 0/1
         if isinstance(action, (np.ndarray, list, tuple)):
-            # Discrete(2) 在 VecEnv 下也可能传 ndarray([0/1])
             fire_bool = int(np.asarray(action).reshape(-1)[0])
         else:
             fire_bool = int(action)
 
-        # 用上一时刻观测预测机动动作
-        assert self._last_obs is not None, "内部状态异常：_last_obs 为空"
-        maneuver = self._predict_maneuver(self._last_obs)
-        full_action = self._merge_action(maneuver, fire_bool)
-
+        # 首步：按上层选择是否发射
+        full_action = self._build_action(fire_bool)
         step_out = self.env.step(full_action)
 
-        # gym 与 gymnasium 兼容的返回解包
-        if len(step_out) == 5:
-            # gymnasium: obs, reward, terminated, truncated, info
+        if self._is_gymnasium_step_tuple(step_out):
             obs, reward, terminated, truncated, info = step_out
             self._last_obs = obs
-            return obs, reward, terminated, truncated, info
+            launched = bool(info.get("launch", False))
+            done = terminated or truncated
         else:
-            # gym: obs, reward, done, info
             obs, reward, done, info = step_out
             self._last_obs = obs
-            return obs, reward, done, info
+            launched = bool(info.get("launch", False))
+            terminated, truncated = done, False  # 供汇总时使用
+
+        # 若没有真正发射，或发射后底层未把 launch 标记出来：按普通一步返回
+        if not launched:
+            return (obs, reward, terminated, truncated, info) if self._is_gymnasium_step_tuple(step_out) \
+                   else (obs, reward, done, info)
+
+        # 发生发射：从现在开始内部 roll out 到回合结束
+        cum_reward = float(reward)
+        rolled_steps = 0
+
+        while True:
+            if self._is_gymnasium_step_tuple(step_out):
+                if terminated or truncated:
+                    break
+            else:
+                if done:
+                    break
+
+            # 后续不再允许再次发射：fire=0，前三维仍为 0
+            full_action = self._build_action(0)
+            step_out = self.env.step(full_action)
+
+            if self._is_gymnasium_step_tuple(step_out):
+                obs, r, terminated, truncated, info = step_out
+                self._last_obs = obs
+                cum_reward += float(r)
+                rolled_steps += 1
+            else:
+                obs, r, done, info = step_out
+                self._last_obs = obs
+                cum_reward += float(r)
+                rolled_steps += 1
+                terminated, truncated = done, False  # 仅为统一返回字段
+
+        # 在最后一步的 info 里补充一些记录
+        info = dict(info) if isinstance(info, dict) else {}
+        info.setdefault("launched", True)
+        info["rolled_out_steps"] = rolled_steps
+        info["cum_reward_after_launch"] = cum_reward
+
+        # 返回“终止时刻”的 obs / flags，以及累计奖励
+        if self._is_gymnasium_step_tuple(step_out):
+            return obs, cum_reward, terminated, truncated, info
+        else:
+            return obs, cum_reward, True, info
+
 
 
 def make_wrapped_env(env_id, args):
     """工厂函数：创建单个底层 env 并包上 HybridActionWrapper。"""
     base = make_normal_env(env_id, args)  # 你原来的环境创建
-    wrapped = HybridActionWrapper(base, MANEUVER_MODEL_PATH, use_gpu=False)
+    wrapped = HybridActionWrapper(base)
     return wrapped
 
 

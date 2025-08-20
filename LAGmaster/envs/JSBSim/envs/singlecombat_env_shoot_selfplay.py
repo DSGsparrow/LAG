@@ -279,6 +279,11 @@ class SingleCombatEnvShootSelfPlay(BaseEnv):
                     self.launch_distance = obs['A0100'][13] * 10000
                 else:
                     info['opponent_launch'] = True
+            else:
+                if agent_id == "A0100":
+                    info['launch'] = False
+                else:
+                    info['opponent_launch'] = False
 
         dones = {}
         for agent_id in self.agents.keys():

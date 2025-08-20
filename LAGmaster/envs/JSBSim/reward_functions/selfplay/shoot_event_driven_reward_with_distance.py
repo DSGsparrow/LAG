@@ -31,17 +31,18 @@ class SelfPlayShootMissileRewardWithDistance(BaseRewardFunction):
         # 命中与未命中参数
         self.hit_reward = self._cfg("hit_reward", 1.0)
         self.miss_base_penalty = self._cfg("miss_base_penalty", -0.75)
-        self.miss_bonus_max = self._cfg("miss_bonus_max", 1.5)
+        self.miss_bonus_max = self._cfg("miss_bonus_max", 0.75)
+        # 不应该出现正的未命中奖励，不然可能75 约等于 100-t
 
         # “判定命中”的距离阈值（公里），默认 0.3 km（300 m）
         self.hit_distance_km = self._cfg("hit_distance_km", 0.3)
 
         # logistic 距离塑形参数
-        self.distance_mid_km = self._cfg("distance_mid_km", 7.0)  # R=0.5 的中点
-        self.distance_steep_km = self._cfg("distance_steep_km", 1.2)  # 越大越平滑
+        self.distance_mid_km = self._cfg("distance_mid_km", 5.0)  # R=0.5 的中点
+        self.distance_steep_km = self._cfg("distance_steep_km", 1.0)  # 越大越平滑
 
         # 距离分箱（量化）步长，抑制小幅波动（km）
-        self.distance_bin_km = self._cfg("distance_bin_km", 0.5)  # 0.5 km 一档
+        self.distance_bin_km = self._cfg("distance_bin_km", 0.3)  # 0.5 km 一档
 
     def reset(self, task, env):
         return super().reset(task, env)
