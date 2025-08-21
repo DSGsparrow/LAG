@@ -24,12 +24,12 @@ def parse_args():
     parser.add_argument("--target_state", type=int, default=0)
 
     # 基本路径
-    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_static_solo3.log")
-    parser.add_argument("--model_path", type=str, default="trained_model/shoot_static_solo2/final_model.zip")
+    parser.add_argument("--log_file", type=str, default="./train/result/train_shoot_static_solo_gap.log")
+    parser.add_argument("--model_path", type=str, default="trained_model/shoot_static_solo4/final_model.zip")
     parser.add_argument("--pretrained_pt_path", type=str, default="")
-    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_static_solo3/checkpoints/")
+    parser.add_argument("--checkpoint_path", type=str, default="./trained_model/shoot_static_solo_gap/checkpoints/")
     parser.add_argument("--tb_log", type=str, default="./ppo_air_combat_sp_tb/")
-    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_static_solo3")
+    parser.add_argument("--save_model_path", type=str, default="./trained_model/shoot_static_solo_gap")
     parser.add_argument("--model_dir", type=str, default="./model_pool/shoot_static")
 
     # 模型路径
@@ -49,15 +49,15 @@ def parse_args():
     parser.add_argument("--num_envs", type=int, default=1)
 
     # 训练参数
-    parser.add_argument("--total_timesteps", type=int, default=5_000_000)
+    parser.add_argument("--total_timesteps", type=int, default=8_000_000)
     parser.add_argument("--save_interval", type=int, default=20_000)
-    parser.add_argument("--learning_rate", type=float, default=3e-4)
+    parser.add_argument("--learning_rate", type=float, default=1e-4)  # 3e-4
     parser.add_argument("--n_steps", type=int, default=2048)
-    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--n_epochs", type=int, default=10)
     parser.add_argument("--gamma", type=float, default=0.99)
     parser.add_argument("--gae_lambda", type=float, default=0.95)
-    parser.add_argument("--clip_range", type=float, default=0.2)
+    parser.add_argument("--clip_range", type=float, default=0.15)
     parser.add_argument("--ent_coef", type=float, default=0.02)
 
     # Transformer 网络参数
@@ -72,18 +72,20 @@ def parse_args():
 class HybridActionWrapper(gym.Wrapper):
     """
     只训练“发射布尔值”，前三维机动动作恒为 0。
-    若 action=1 且底层返回 info['launch']=True，则在内部 roll out 到回合结束，
-    将发射到结束间的累计奖励一次性返回给上层。
+    若 action=1 且底层返回 info['launch']=True：
+      - rollout_after_launch=True: 在内部 roll out 到回合结束，累计奖励一次性返回
+      - rollout_after_launch=False: 不跳过，按普通一步返回
     """
 
-    def __init__(self, env):
+    def __init__(self, env, rollout_after_launch: bool = True):
         super().__init__(env)
+        self.rollout_after_launch = rollout_after_launch
 
         # 对外：观测不变，只训练二元发射
         self.observation_space = env.observation_space
         self.action_space = spaces.Discrete(2)  # 0=不发射, 1=发射
 
-        # 记录底层动作空间类型与维度
+        # 底层动作空间信息
         self._is_multidiscrete = isinstance(env.action_space, spaces.MultiDiscrete)
         self._is_box = isinstance(env.action_space, spaces.Box)
 
@@ -98,22 +100,24 @@ class HybridActionWrapper(gym.Wrapper):
 
         self._last_obs = None
 
-    # ---------- 工具：构造底层动作（前三维 0，最后一维为 fire） ----------
+    # 运行时动态切换
+    def set_rollout_after_launch(self, flag: bool):
+        self.rollout_after_launch = bool(flag)
+
+    # ---------- 构造底层动作（前三维 0，最后一维为 fire） ----------
     def _build_action(self, fire_bool: int):
         fire = int(fire_bool)
 
         if self._is_multidiscrete:
-            # 多离散：前三维给 0，最后一维为 fire（若有>4维，余下置 0）
             out = np.zeros_like(self.env.action_space.nvec, dtype=np.int64)
             out[:3] = 0
             out[3] = fire
-            # 保证合法范围
+            # 合法范围
             out = np.minimum(out, self.env.action_space.nvec - 1)
             out = np.maximum(out, 0)
             return out
 
         elif self._is_box:
-            # 连续：前三维 0，最后一维 fire，其他维也置 0
             out = np.zeros((self.env.action_space.shape[0],), dtype=np.float32)
             out[:3] = 0.0
             out[3] = float(fire)
@@ -122,7 +126,7 @@ class HybridActionWrapper(gym.Wrapper):
         else:
             raise RuntimeError("未知的动作空间类型。")
 
-    # ---------- 兼容 gym / gymnasium 的 done 拆分 ----------
+    # ---------- 兼容 gym / gymnasium ----------
     @staticmethod
     def _is_gymnasium_step_tuple(t):
         # gymnasium: (obs, reward, terminated, truncated, info)
@@ -145,7 +149,7 @@ class HybridActionWrapper(gym.Wrapper):
         else:
             fire_bool = int(action)
 
-        # 首步：按上层选择是否发射
+        # 第一步：按上层选择是否发射
         full_action = self._build_action(fire_bool)
         step_out = self.env.step(full_action)
 
@@ -158,14 +162,19 @@ class HybridActionWrapper(gym.Wrapper):
             obs, reward, done, info = step_out
             self._last_obs = obs
             launched = bool(info.get("launch", False))
-            terminated, truncated = done, False  # 供汇总时使用
+            terminated, truncated = done, False  # 统一用
 
-        # 若没有真正发射，或发射后底层未把 launch 标记出来：按普通一步返回
+        # 未发射：直接返回本步
         if not launched:
             return (obs, reward, terminated, truncated, info) if self._is_gymnasium_step_tuple(step_out) \
                    else (obs, reward, done, info)
 
-        # 发生发射：从现在开始内部 roll out 到回合结束
+        # 发射了，但选择“不跳过”：返回本步（保持与底层一致）
+        if not self.rollout_after_launch:
+            return (obs, reward, terminated, truncated, info) if self._is_gymnasium_step_tuple(step_out) \
+                   else (obs, reward, done, info)
+
+        # 发射且“跳过后续”：内部 roll out 到回合结束并累加奖励
         cum_reward = float(reward)
         rolled_steps = 0
 
@@ -177,7 +186,7 @@ class HybridActionWrapper(gym.Wrapper):
                 if done:
                     break
 
-            # 后续不再允许再次发射：fire=0，前三维仍为 0
+            # 后续固定 fire=0，前三维仍为 0
             full_action = self._build_action(0)
             step_out = self.env.step(full_action)
 
@@ -191,9 +200,9 @@ class HybridActionWrapper(gym.Wrapper):
                 self._last_obs = obs
                 cum_reward += float(r)
                 rolled_steps += 1
-                terminated, truncated = done, False  # 仅为统一返回字段
+                terminated, truncated = done, False  # 仅为统一标记
 
-        # 在最后一步的 info 里补充一些记录
+        # 在最后一步的 info 里补充一些记录（只在“跳过”模式下添加）
         info = dict(info) if isinstance(info, dict) else {}
         info.setdefault("launched", True)
         info["rolled_out_steps"] = rolled_steps
@@ -210,7 +219,7 @@ class HybridActionWrapper(gym.Wrapper):
 def make_wrapped_env(env_id, args):
     """工厂函数：创建单个底层 env 并包上 HybridActionWrapper。"""
     base = make_normal_env(env_id, args)  # 你原来的环境创建
-    wrapped = HybridActionWrapper(base)
+    wrapped = HybridActionWrapper(base, rollout_after_launch=False)
     return wrapped
 
 

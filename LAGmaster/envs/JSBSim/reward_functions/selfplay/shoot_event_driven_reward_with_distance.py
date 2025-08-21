@@ -5,20 +5,17 @@ import logging
 
 class SelfPlayShootMissileRewardWithDistance(BaseRewardFunction):
     """
-    导弹命中或未命中的奖励函数（平滑且抗抖动版）
-    - 命中目标：+1.0
-    - 未命中目标：-0.75 + 距离相关奖励（最大 +0.75，最终 reward ∈ [-0.75, +0.75]）
-    - 距离奖励采用 logistic 形状，并对距离做分箱以减小抖动
+    导弹命中/未命中奖励（平滑、全负的未命中版）
+    - 命中：+hit_reward
+    - 未命中：r_miss(d) ∈ [miss_min_reward, 0)，且
+        · 距离 d 越近 → 奖励趋近 0（惩罚小），梯度更大
+        · 距离 d 越远 → 奖励趋近 miss_min_reward（更负）
+      提供两种形状可选：logistic / exponential
+      统一以 half_km（默认 5km）为“半幅点”（奖励等于最小值的一半）
     """
 
-    # ---------- 小工具：统一读取 config ----------
+    # ---------- 配置读取 ----------
     def _cfg(self, key: str, default):
-        """
-        读取优先级：
-        1) getattr(config, f'{ClassName}_{key}')
-        2) getattr(config, key)
-        都没有则使用 default
-        """
         prefixed = getattr(self.config, f'{self.__class__.__name__}_{key}', None)
         if prefixed is not None:
             return prefixed
@@ -28,80 +25,112 @@ class SelfPlayShootMissileRewardWithDistance(BaseRewardFunction):
     def __init__(self, config):
         super().__init__(config)
 
-        # 命中与未命中参数
+        # 命中奖励
         self.hit_reward = self._cfg("hit_reward", 1.0)
-        self.miss_base_penalty = self._cfg("miss_base_penalty", -0.75)
-        self.miss_bonus_max = self._cfg("miss_bonus_max", 0.75)
-        # 不应该出现正的未命中奖励，不然可能75 约等于 100-t
 
-        # “判定命中”的距离阈值（公里），默认 0.3 km（300 m）
-        self.hit_distance_km = self._cfg("hit_distance_km", 0.3)
+        # 未命中奖励下限（负数，越负表示惩罚越大）
+        # 未命中奖励将位于 [miss_min_reward, 0)
+        self.miss_min_reward = float(self._cfg("miss_min_reward", -1.0))
 
-        # logistic 距离塑形参数
-        self.distance_mid_km = self._cfg("distance_mid_km", 5.0)  # R=0.5 的中点
-        self.distance_steep_km = self._cfg("distance_steep_km", 1.0)  # 越大越平滑
+        # 形状选择：'logistic' 或 'exp'
+        self.miss_shape_type = str(self._cfg("miss_shape_type", "exp")).lower()
+
+        # 半幅点：在 d=half_km 时，未命中奖励 = miss_min_reward 的一半
+        self.half_km = float(self._cfg("half_km", 5.0))
+
+        # logistic 的斜率控制（越大越平滑）
+        self.distance_steep_km = float(self._cfg("distance_steep_km", 1.0))
 
         # 距离分箱（量化）步长，抑制小幅波动（km）
-        self.distance_bin_km = self._cfg("distance_bin_km", 0.3)  # 0.5 km 一档
+        self.distance_bin_km = float(self._cfg("distance_bin_km", 0.3))
 
-    def reset(self, task, env):
-        return super().reset(task, env)
+        # 判定命中的距离阈值（km），多保留一份备用
+        self.hit_distance_km = float(self._cfg("hit_distance_km", 0.3))
 
+        # 防御：half_km、steep 正数
+        self.half_km = max(1e-6, self.half_km)
+        self.distance_steep_km = max(1e-6, self.distance_steep_km)
+
+    # ---------- 形状函数 ----------
     @staticmethod
     def _logistic01(x, mid, steep):
         """
-        标准 [0,1] logistic： 1 / (1 + exp((x - mid)/steep))
-        x, mid, steep 都是标量或 ndarray，单位需一致
+        标准 [0,1] logistic，x 越小越接近 1：
+        s(x) = 1 / (1 + exp((x - mid)/steep))
         """
         return 1.0 / (1.0 + np.exp((x - mid) / max(1e-6, steep)))
+
+    @staticmethod
+    def _exp_close01(x, tau):
+        """
+        指数型接近度：s(x) = exp(-x / tau)，x 越小越接近 1
+        其中 tau = half_km / ln(2) 使得在 x=half_km 时 s=0.5
+        """
+        tau = max(1e-6, tau)
+        return np.exp(-x / tau)
+
+    def _miss_reward_from_distance(self, d_km):
+        """
+        基于距离的未命中奖励（< 0），距离单位 km
+        统一公式：r_miss(d) = miss_min_reward * (1 - s_close(d))
+        其中 s_close(d)∈(0,1] 为“接近度”：
+          - logistic:  s_close(d) = logistic01(d; mid=half_km, steep=distance_steep_km)
+          - exp:       s_close(d) = exp(-d / tau), tau = half_km / ln2
+        性质：
+          d→0   => s_close→1，r→0^-（惩罚最小，梯度最大）
+          d→∞   => s_close→0，r→miss_min_reward（趋近最负）
+          d=half_km 时 r = miss_min_reward * 0.5（半幅点）
+        """
+        if not np.isfinite(d_km) or d_km < 0:
+            # 距离异常：按“最远”处理 → 最负
+            return self.miss_min_reward
+
+        if self.miss_shape_type == "exp":
+            # tau 由 half_km 推出：exp(-half_km / tau) = 0.5
+            tau = self.half_km / np.log(2.0)
+            s_close = self._exp_close01(d_km, tau)
+        else:
+            # 默认 logistic
+            s_close = self._logistic01(d_km, self.half_km, self.distance_steep_km)
+
+        # 将“接近度”映射为全负奖励（0 附近 -> 接近 0^-；远处 -> miss_min_reward）
+        r = self.miss_min_reward * (1.0 - s_close)
+        return float(r)
+
+    # ---------- 主流程 ----------
+    def reset(self, task, env):
+        return super().reset(task, env)
 
     def get_reward(self, task, env, agent_id):
         reward = 0.0
         agent = env.agents[agent_id]
 
-        for missile in agent.launch_missiles:
+        for missile in getattr(agent, "launch_missiles", []):
             if not missile.is_done:
-                continue  # 忽略未结束的导弹
+                continue  # 忽略飞行中的导弹
 
-            if missile.is_success:
-                # 命中：给定高奖励
-                r = self.hit_reward
+            if getattr(missile, "is_success", False):
+                r = float(self.hit_reward)
                 reward += r
                 logging.info(f"[HIT] +{r:.3f}")
                 continue
 
-            if missile.is_miss:
-                # 未命中：基础惩罚 + 距离形状奖励（平滑+分箱）
-                base_penalty = self.miss_base_penalty
-
+            if getattr(missile, "is_miss", False):
                 # 终端弹目距离（米 -> 公里）
                 d_m = float(getattr(missile, "target_distance", np.nan))
-                if not np.isfinite(d_m) or d_m < 0:
-                    # 防御性处理：距离异常时不给额外奖励
-                    d_km = np.inf
-                else:
-                    d_km = d_m / 1000.0
+                d_km = d_m / 1000.0 if np.isfinite(d_m) and d_m >= 0 else np.inf
 
-                # 距离分箱（抑制小波动）：例如 0.2km 为一档
+                # 距离分箱（抑制抖动）
                 if np.isfinite(d_km):
                     d_km_q = np.round(d_km / self.distance_bin_km) * self.distance_bin_km
                 else:
-                    d_km_q = d_km  # inf 保持 inf
+                    d_km_q = d_km
 
-                # logistic 形状：距离越小越接近 1，越大越接近 0
-                shape = 0.0 if not np.isfinite(d_km_q) else self._logistic01(
-                    d_km_q, self.distance_mid_km, self.distance_steep_km
-                )
-
-                # 补偿奖励幅度控制（最大不超过 miss_bonus_max）
-                add = self.miss_bonus_max * shape
-
-                r = base_penalty + add
+                r = self._miss_reward_from_distance(d_km_q)
                 reward += r
 
                 logging.info(
-                    f"[MISS] d={d_m:.1f} m (~{d_km_q:.2f} km binned), "
-                    f"shape={shape:.3f}, add={add:.3f}, miss_r={r:.3f}"
+                    f"[MISS-{self.miss_shape_type}] d={d_m:.1f} m (~{d_km_q:.2f} km binned), miss_r={r:.3f}"
                 )
 
         return self._process(reward, agent_id)

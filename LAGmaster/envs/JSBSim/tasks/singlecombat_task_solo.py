@@ -219,7 +219,7 @@ class HierarchicalSingleCombatShootMissileSoloTask(HierarchicalSingleCombatTask,
                     MissileSimulator.create(parent=agent, target=agent.enemies[0], uid=new_missile_uid))
                 self.remaining_missiles[agent_id] -= 1
                 self.launch[agent_id] = True
-                logging.info(f'{agent_id} launch mission! '
+                logging.info(f'{agent_id} launch mission! distance={obs[13] * 10000}'
                              f'Total Steps={env.current_step}, obs={obs}, state={state}, current_reward={env.cumulative_reward}')
                              # f'Total Steps={env.current_step}, current_reward={env.cumulative_reward}')
 

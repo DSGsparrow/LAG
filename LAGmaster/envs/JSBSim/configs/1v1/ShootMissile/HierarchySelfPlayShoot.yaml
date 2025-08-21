@@ -2,7 +2,7 @@
 task: hierarchical_solo_shoot
 
 # file path
-render_path: "./render_train/shoot_static_solo3"
+render_path: "./render_train/shoot_static_solo_gap"
 state_path: "./test_result/result/states_imi_dodge2.jsonl"
 
 # shoot area
@@ -77,7 +77,7 @@ battle_field_center: [120.0, 60.0, 0.0]
 
 #SelfPlayShootPosturePenalty_scale: 15
 
-SelfPlayShootWaitReward_scale: 0.05
+#SelfPlayShootWaitReward_scale: 0.05
 #SelfPlayShootWaitReward_potential: true
 
 #SelfPlayEnemyPostureReward_scale: 0.1
